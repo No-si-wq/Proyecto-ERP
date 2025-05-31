@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Form, Input, Button, Typography, Card, Alert } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
+import { AuthContext } from '../../hooks/AuthProvider';
 
 const { Title } = Typography;
 
@@ -53,7 +54,7 @@ const Login = ({ setAuth }) => {
         setError(data.message || 'Usuario o contraseña incorrectos');
       }
     } catch (err) {
-      setError('Error de red o servidor');
+      setError('Error de red o servidor', err.message);
     } finally {
       setLoading(false);
     }
