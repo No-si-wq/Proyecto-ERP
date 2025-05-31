@@ -1,14 +1,16 @@
 import React from 'react';
 import { Button, Typography } from 'antd';
+import { useNavigate } from 'react-router-dom';
 
 const { Title } = Typography;
 
 const Home = ({ setAuth }) => {
+  const navigate = useNavigate();
 
   const handleLogout = () => {
     setAuth(false);
     localStorage.removeItem('token');
-    window.location.href = '/login';
+    navigate('/login');
   };
 
   return (

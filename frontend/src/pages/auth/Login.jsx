@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { Form, Input, Button, Typography, Card, Alert } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
-import { AuthContext } from '../../hooks/AuthProvider';
+import { AuthContext } from '../../hooks/AuthProvider'; 
 
 const { Title } = Typography;
 
@@ -28,7 +28,8 @@ const cardStyle = {
   padding: '24px 16px',
 };
 
-const Login = ({ setAuth }) => {
+const Login = () => {
+  const { setAuth } = useContext(AuthContext); // <-- Esto es lo importante
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -43,10 +44,9 @@ const Login = ({ setAuth }) => {
         body: JSON.stringify({ username, password }),
       });
       if (response.ok) {
-        // Puedes guardar el token si tu backend lo devuelve
         const data = await response.json();
         localStorage.setItem('token', data.token);
-        setAuth(true);
+        setAuth({ user: data.username, token: data.token });
         localStorage.setItem('auth', 'true');
         navigate('/home');
       } else {
