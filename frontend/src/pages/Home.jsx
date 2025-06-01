@@ -11,6 +11,27 @@ import {
 
 const { Title, Text } = Typography;
 
+const modules = [
+  {
+    title: "Ventas",
+    description: "Gestiona las ventas y los clientes.",
+    icon: <DollarOutlined style={{ fontSize: 36, color: "#52c41a" }} />,
+    path: "/ventas",
+  },
+  {
+    title: "Compras",
+    description: "Administra las compras y proveedores.",
+    icon: <ShoppingCartOutlined style={{ fontSize: 36, color: "#1890ff" }} />,
+    path: "/compras",
+  },
+  {
+    title: "Inventario",
+    description: "Consulta y controla el inventario.",
+    icon: <AppstoreOutlined style={{ fontSize: 36, color: "#faad14" }} />,
+    path: "/inventario",
+  },
+];
+
 const Home = () => {
   const { setAuth } = useAuth();
   const navigate = useNavigate();
@@ -20,28 +41,6 @@ const Home = () => {
     localStorage.removeItem('token');
     navigate('/login');
   };
-
-  // Accesos directos a módulos
-  const modules = [
-    {
-      title: "Ventas",
-      description: "Gestiona las ventas y los clientes.",
-      icon: <DollarOutlined style={{ fontSize: 36, color: "#52c41a" }} />,
-      path: "/ventas",
-    },
-    {
-      title: "Compras",
-      description: "Administra las compras y proveedores.",
-      icon: <ShoppingCartOutlined style={{ fontSize: 36, color: "#1890ff" }} />,
-      path: "/compras",
-    },
-    {
-      title: "Inventario",
-      description: "Consulta y controla el inventario.",
-      icon: <AppstoreOutlined style={{ fontSize: 36, color: "#faad14" }} />,
-      path: "/inventario",
-    },
-  ];
 
   return (
     <div
@@ -86,7 +85,7 @@ const Home = () => {
           <Col xs={24} sm={12} md={8} key={idx}>
             <Card
               hoverable
-              style={{ textAlign: 'center', minHeight: 210 }}
+              style={{ textAlign: 'center', minHeight: 210, cursor: 'pointer' }}
               onClick={() => navigate(mod.path)}
             >
               {mod.icon}
