@@ -6,6 +6,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import Home from './pages/Home';
+import Compras from './pages/Compras';
+import Ventas from './pages/Ventas';
+import Inventario from './pages/Inventario';
 import PrivateRoute from './components/PrivateRoute';
 import { AuthProvider } from './hooks/AuthProvider';
 
