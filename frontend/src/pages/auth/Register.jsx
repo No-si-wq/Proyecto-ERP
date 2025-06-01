@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, Typography, Card, Alert } from 'antd';
+import { Form, Input, Button, Typography, Card, Alert, Select } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 
 const { Title } = Typography;
+const { Option } = Select;
 
 const containerStyle = {
   minHeight: '100vh',
@@ -27,21 +28,28 @@ const cardStyle = {
   padding: '24px 16px',
 };
 
+const roleOptions = [
+  { value: 'ventas', label: 'Ventas' },
+  { value: 'facturacion', label: 'Facturación' },
+  { value: 'admin', label: 'Administrador' },
+  { value: 'contabilidad', label: 'Contador' }
+];
+
 const Register = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const onFinish = async ({ username, email, password }) => {
+  const onFinish = async ({ username, email, password, role }) => {
     setLoading(true);
     setError('');
     setSuccess('');
     try {
-      const response = await fetch('http://localhost:3000/api/auth/register', {
+      const response = await fetch('http://localhost:5000/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password }),
+        body: JSON.stringify({ username, email, password, role }),
       });
       if (response.ok) {
         setSuccess('¡Registro exitoso! Ahora puedes iniciar sesión.');
@@ -51,7 +59,7 @@ const Register = () => {
         setError(data.message || 'Error al registrar');
       }
     } catch (err) {
-      setError('Error de red o servidor');
+      setError( err.message);
     } finally {
       setLoading(false);
     }
@@ -97,6 +105,18 @@ const Register = () => {
             style={{ marginBottom: 16 }}
           >
             <Input.Password prefix={<LockOutlined />} placeholder="Contraseña" size="large" />
+          </Form.Item>
+          <Form.Item
+            name="role"
+            label="Rol"
+            rules={[{ required: true, message: 'Por favor selecciona un rol' }]}
+            style={{ marginBottom: 16 }}
+          >
+            <Select placeholder="Selecciona un rol" size="large">
+              {roleOptions.map(opt => (
+                <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+              ))}
+            </Select>
           </Form.Item>
           <Form.Item style={{ marginBottom: 0 }}>
             <Button type="primary" htmlType="submit" block size="large" loading={loading}>

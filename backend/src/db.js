@@ -1,12 +1,10 @@
-// erp-backend/src/db.js
-import { PrismaClient } from '@prisma/client';
+const { Pool } = require('pg');
+require('dotenv').config();
 
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL + "&connection_limit=20"
-    }
-  }
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL
 });
 
-export default prisma; 
+module.exports = {
+  query: (text, params) => pool.query(text, params),
+};

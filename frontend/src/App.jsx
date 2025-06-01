@@ -1,4 +1,7 @@
 import React from 'react';
+import '@ant-design/v5-patch-for-react-19';
+import { Button } from 'antd';
+import { UserOutlined } from '@ant-design/icons';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
@@ -17,7 +20,7 @@ function App() {
             path="/home" 
             element={
               <PrivateRoute>
-                <Home />
+                <Home/>
               </PrivateRoute>
             } 
           />

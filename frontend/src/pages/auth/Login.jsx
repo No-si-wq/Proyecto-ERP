@@ -29,7 +29,7 @@ const cardStyle = {
 };
 
 const Login = () => {
-  const { setAuth } = useContext(AuthContext); // <-- Esto es lo importante
+  const { setAuth } = useContext(AuthContext); 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();

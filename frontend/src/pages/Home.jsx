@@ -1,10 +1,12 @@
 import React from 'react';
 import { Button, Typography } from 'antd';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/AuthProvider'; // Ajusta la ruta si es necesario
 
 const { Title } = Typography;
 
-const Home = ({ setAuth }) => {
+const Home = () => {
+  const { setAuth } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {

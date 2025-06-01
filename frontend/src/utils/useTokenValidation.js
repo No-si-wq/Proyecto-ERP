@@ -10,7 +10,7 @@ export function useTokenValidation() {
       return;
     }
 
-    fetch('http://localhost:3000/api/auth/validate', {
+    fetch('http://localhost:5000/api/auth/validate', {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,
