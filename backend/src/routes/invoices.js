@@ -63,9 +63,6 @@ router.post('/compra', async (req, res) => {
       if (!product) {
         return res.status(400).json({ error: `Producto con id ${item.productId} no existe` });
       }
-      if (product.quantity < item.quantity) {
-        return res.status(400).json({ error: `Stock insuficiente para el producto ${product.name}` });
-      }
     }
 
     const total = items.reduce((sum, item) => sum + item.quantity * item.price, 0);

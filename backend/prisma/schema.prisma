@@ -1,3 +1,4 @@
+// prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,15 +8,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ---- Modelos Mejorados ----
-
+// ---- Modelos/Tablas ----
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String
-  username  String
-  role      String   @default("USER")
-  createdAt DateTime @default(now())
+  id          Int      @id @default(autoincrement())
+  email       String   @unique
+  password    String
+  username    String
+  role        String   @default("USER")
+  createdAt   DateTime @default(now())
 }
 
 model Product {
@@ -31,44 +31,44 @@ model Product {
 }
 
 model Invoice {
-  id        Int           @id @default(autoincrement())
-  client    String
-  total     Float
-  createdAt DateTime      @default(now())
-  InvoiceItem     InvoiceItem[]
+  id          Int           @id @default(autoincrement())
+  client      String
+  total       Float
+  createdAt   DateTime      @default(now())
+  items       InvoiceItem[]
 }
 
 model InvoiceItem {
-  id        Int      @id @default(autoincrement())
-  invoice   Invoice  @relation(fields: [invoiceId], references: [id])
-  invoiceId Int
-  product   Product  @relation(fields: [productId], references: [id])
-  productId Int
-  quantity  Int
-  price     Float
-  subtotal  Float
+  id         Int      @id @default(autoincrement())
+  invoice    Invoice  @relation(fields: [invoiceId], references: [id])
+  invoiceId  Int
+  product    Product  @relation(fields: [productId], references: [id])
+  productId  Int
+  quantity   Int
+  price      Float
+  subtotal   Float
 
   @@index([invoiceId])
   @@index([productId])
 }
 
 model Purchase {
-  id        Int            @id @default(autoincrement())
-  supplier  String
-  total     Float
-  createdAt DateTime       @default(now())
-  PurchaseItem     PurchaseItem[]
+  id            Int            @id @default(autoincrement())
+  supplier      String
+  total         Float
+  createdAt     DateTime       @default(now())
+  items         PurchaseItem[]
 }
 
 model PurchaseItem {
-  id         Int       @id @default(autoincrement())
-  purchase   Purchase  @relation(fields: [purchaseId], references: [id])
-  purchaseId Int
-  product    Product   @relation(fields: [productId], references: [id])
-  productId  Int
-  quantity   Int
-  price      Float
-  subtotal   Float
+  id          Int       @id @default(autoincrement())
+  purchase    Purchase  @relation(fields: [purchaseId], references: [id])
+  purchaseId  Int
+  product     Product   @relation(fields: [productId], references: [id])
+  productId   Int
+  quantity    Int
+  price       Float
+  subtotal    Float
 
   @@index([purchaseId])
   @@index([productId])
