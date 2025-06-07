@@ -117,7 +117,8 @@ const Compras = () => {
   return (
     <div style={{
       minHeight: '100vh',
-      minWidth: '100vw',
+      height: '100%',
+      width: '100%',
       background: 'linear-gradient(135deg, #f0f5ff 0%, #fffbe6 100%)',
       display: 'flex',
       flexDirection: 'column',

@@ -35,7 +35,7 @@ const Facturas = () => {
   ];
 
   return (
-    <div style={{ maxWidth: '100vh', minWidth: '100vw', margin: "0 auto", padding: 24 }}>
+    <div style={{ maxWidth: '100vh', width: '100%', margin: "0 auto", padding: 24 }}>
       <Title level={2}>Documentos</Title>
       <Table 
         columns={columns}

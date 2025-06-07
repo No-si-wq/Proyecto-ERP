@@ -47,7 +47,7 @@ const Proveedores = () => {
   ];
 
   return (
-    <div style={{ padding: 24, minWidth: '100vw', minHeight: '100vh' }}>
+    <div style={{ padding: 24, width: '100%', minHeight: '100vh' }}>
       <Button type="primary" onClick={() => setModalVisible(true)} style={{ marginBottom: 16 }}>
         Nuevo Proveedor
       </Button>
