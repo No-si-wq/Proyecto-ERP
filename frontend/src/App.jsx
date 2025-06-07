@@ -9,6 +9,7 @@ import Home from './pages/Home';
 import Compras from './pages/Compras';
 import Ventas from './pages/Ventas';
 import Inventario from './pages/Inventario';
+import Facturas from "./pages/Factura";
 import PrivateRoute from './components/PrivateRoute';
 import { AuthProvider } from './hooks/AuthProvider';
 
@@ -21,6 +22,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/ventas" element={<Ventas />} />
           <Route path="/compras" element={<Compras />} />
+          <Route path="/facturas" element={<Facturas />} />
           <Route path="/inventario" element={<Inventario />} />
           <Route 
             path="/home" 

@@ -35,9 +35,9 @@ const Facturas = () => {
   ];
 
   return (
-    <div style={{ maxWidth: 1000, margin: "0 auto", padding: 24 }}>
-      <Title level={2}>Facturas</Title>
-      <Table
+    <div style={{ maxWidth: '100vh', minWidth: '100vw', margin: "0 auto", padding: 24 }}>
+      <Title level={2}>Documentos</Title>
+      <Table 
         columns={columns}
         dataSource={facturas}
         rowKey="id"

@@ -7,6 +7,7 @@ import {
   ShoppingCartOutlined,
   DollarOutlined,
   AppstoreOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
@@ -29,6 +30,12 @@ const modules = [
     description: "Consulta y controla el inventario.",
     icon: <AppstoreOutlined style={{ fontSize: 36, color: "#faad14" }} />,
     path: "/inventario",
+  },
+  {
+    title: "Documentos",
+    description: "Visualiza todos tus Documentos.",
+    icon: <FileTextOutlined style={{ fontSize: 36, color: "#722ed1" }} />,
+    path: "/facturas",
   },
 ];
 
@@ -60,6 +67,7 @@ const Home = () => {
           maxWidth: 600,
           width: '100%',
           textAlign: 'center',
+          marginTop: 48,
           marginBottom: 40,
           boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
         }}
