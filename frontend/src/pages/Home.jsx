@@ -67,13 +67,15 @@ const Home = () => {
     <div
       style={{
         minHeight: '100vh',
-        height: '100%',
+        height: '100%', 
         width: '100%',
         background: 'linear-gradient(135deg, #f0f5ff 0%, #fffbe6 100%)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
         padding: 24,
         paddingTop: 48,
         boxSizing: 'border-box',
-        overflowX: 'hidden',
       }}
     >
       <Card

@@ -123,7 +123,6 @@ const Compras = () => {
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      justifyContent: 'center',
       padding: 24,
     }}>
       <Button type="primary" onClick={() => setModalVisible(true)} style={{ marginBottom: 16 }}>
