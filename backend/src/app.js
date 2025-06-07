@@ -8,6 +8,8 @@ app.use(express.json());
 
 app.use('/api/auth', authRoutes);
 app.use('/api/auth', require('./routes/auth.routes'));
+app.use('/api/clientes', require('./routes/clients'));
+app.use('/api/proveedores', require('./routes/supplier'));
 app.use('/api/invoices', require('./routes/invoices'));
 app.use('/api/purchase', require('./routes/purchase'));
 app.use('/api/inventory', require('./routes/inventory'));

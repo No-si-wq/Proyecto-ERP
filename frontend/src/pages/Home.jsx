@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Typography, Card, Row, Col } from 'antd';
+import { Button, Typography, Card, Row, Col, Divider } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/AuthProvider';
 import {
@@ -8,6 +8,8 @@ import {
   DollarOutlined,
   AppstoreOutlined,
   FileTextOutlined,
+  UserOutlined,
+  TeamOutlined,
 } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
@@ -37,6 +39,18 @@ const modules = [
     icon: <FileTextOutlined style={{ fontSize: 36, color: "#722ed1" }} />,
     path: "/facturas",
   },
+  {
+    title: "Clientes",
+    description: "Accede aquí para gestionar y visualizar todos tus clientes.",
+    icon: <UserOutlined style={{ fontSize: 36, color: "#722ed1" }} />,
+    path: "/clientes",
+  },
+  {
+    title: "Proveedores",
+    description: "Accede aquí para gestionar y visualizar todos tus proveedores.",
+    icon: <TeamOutlined style={{ fontSize: 36, color: "#722ed1" }} />,
+    path: "/proveedores",
+  },
 ];
 
 const Home = () => {
@@ -58,8 +72,8 @@ const Home = () => {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
         padding: 24,
+        paddingTop: 48,
       }}
     >
       <Card
@@ -67,7 +81,7 @@ const Home = () => {
           maxWidth: 600,
           width: '100%',
           textAlign: 'center',
-          marginTop: 48,
+          marginTop: 0,
           marginBottom: 40,
           boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
         }}

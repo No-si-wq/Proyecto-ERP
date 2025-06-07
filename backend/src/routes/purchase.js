@@ -1,12 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
 // Obtener todas las compras
 router.get('/', async (req, res) => {
   try {
-    const result = await db.query('SELECT * FROM "Purchase"');
-    res.json(result.rows);
+    const purchases = await prisma.purchase.findMany({
+      include: { items: { include: { product: true } }, supplier: true }
+    });
+    res.json(purchases);
   } catch (err) {
     res.status(500).send('Error al obtener compras');
   }
@@ -14,46 +17,80 @@ router.get('/', async (req, res) => {
 
 // Registrar compra y actualizar inventario
 router.post('/', async (req, res) => {
-  const { proveedor, productoId, cantidad, total } = req.body;
-  const client = await db.connect();
+  const { supplierId, items } = req.body;
   try {
-    await client.query('BEGIN');
-    await client.query(
-      'INSERT INTO "Purchase" (proveedor, producto, cantidad, total) VALUES ($1, $2, $3, $4)',
-      [proveedor, productoId, cantidad, total]
-    );
-    await client.query(
-      'UPDATE "Product" SET cantidad = cantidad + $1 WHERE id = $2',
-      [cantidad, productoId]
-    );
-    await client.query('COMMIT');
-    res.sendStatus(201);
+    // Validar proveedor
+    const supplier = await prisma.supplier.findUnique({ where: { id: supplierId } });
+    if (!supplier) {
+      return res.status(400).json({ error: `Proveedor con id ${supplierId} no existe` });
+    }
+
+    // Validar productos
+    for (const item of items) {
+      const product = await prisma.product.findUnique({ where: { id: item.productId } });
+      if (!product) {
+        return res.status(400).json({ error: `Producto con id ${item.productId} no existe` });
+      }
+    }
+
+    const total = items.reduce((sum, item) => sum + item.quantity * item.price, 0);
+
+    // Crear la compra y sus items
+    const purchase = await prisma.purchase.create({
+      data: {
+        supplierId,
+        total,
+        items: {
+          create: items.map(item => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            price: item.price,
+            subtotal: item.quantity * item.price,
+          })),
+        },
+      },
+      include: { items: true, supplier: true },
+    });
+
+    // Actualizar inventario (sumar)
+    for (const item of items) {
+      await prisma.product.update({
+        where: { id: item.productId },
+        data: { quantity: { increment: item.quantity } },
+      });
+    }
+
+    res.status(201).json(purchase);
   } catch (err) {
-    await client.query('ROLLBACK');
-    res.status(500).send('Error al registrar compra');
-  } finally {
-    client.release();
+    console.error(err);
+    res.status(500).json({ error: 'Error al registrar la compra' });
   }
 });
 
 // Eliminar compra y restar stock (opcional)
 router.delete('/:id', async (req, res) => {
-  const id = req.params.id;
-  const compraRes = await db.query('SELECT producto, cantidad FROM "Purchase" WHERE id=$1', [id]);
-  if (compraRes.rows.length === 0) return res.sendStatus(404);
-  const { producto, cantidad } = compraRes.rows[0];
-  const client = await db.connect();
+  const id = Number(req.params.id);
   try {
-    await client.query('BEGIN');
-    await client.query('DELETE FROM "Purchase" WHERE id=$1', [id]);
-    await client.query('UPDATE "Product" SET cantidad = cantidad - $1 WHERE id = $2', [cantidad, producto]);
-    await client.query('COMMIT');
+    // Busca la compra y sus items
+    const purchase = await prisma.purchase.findUnique({
+      where: { id },
+      include: { items: true }
+    });
+    if (!purchase) return res.sendStatus(404);
+
+    // Resta el inventario de los productos
+    for (const item of purchase.items) {
+      await prisma.product.update({
+        where: { id: item.productId },
+        data: { quantity: { decrement: item.quantity } },
+      });
+    }
+
+    // Elimina la compra (cascade debe estar activo o elimina manualmente items primero)
+    await prisma.purchase.delete({ where: { id } });
     res.sendStatus(200);
-  } catch {
-    await client.query('ROLLBACK');
+  } catch (err) {
     res.status(500).send('Error al eliminar compra');
-  } finally {
-    client.release();
   }
 });
 

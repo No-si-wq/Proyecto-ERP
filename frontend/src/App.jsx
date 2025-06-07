@@ -10,6 +10,8 @@ import Compras from './pages/Compras';
 import Ventas from './pages/Ventas';
 import Inventario from './pages/Inventario';
 import Facturas from "./pages/Factura";
+import Clientes from "./pages/Clientes";
+import Proveedores from "./pages/Proveedores";
 import PrivateRoute from './components/PrivateRoute';
 import { AuthProvider } from './hooks/AuthProvider';
 
@@ -18,12 +20,14 @@ function App() {
     <AuthProvider>
       <Router>
         <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/ventas" element={<Ventas />} />
-          <Route path="/compras" element={<Compras />} />
-          <Route path="/facturas" element={<Facturas />} />
-          <Route path="/inventario" element={<Inventario />} />
+          <Route path="/login" element={<PrivateRoute><Login /></PrivateRoute>} />
+          <Route path="/register" element={<PrivateRoute><Register /></PrivateRoute>} />
+          <Route path="/ventas" element={<PrivateRoute><Ventas /></PrivateRoute>} />
+          <Route path="/compras" element={<PrivateRoute><Compras /></PrivateRoute>} />
+          <Route path="/facturas" element={<PrivateRoute><Facturas /></PrivateRoute>} />
+          <Route path="/inventario" element={<PrivateRoute><Inventario /></PrivateRoute>} />
+          <Route path="/clientes" element={<PrivateRoute><Clientes /></PrivateRoute>} />
+          <Route path="/proveedores" element={<PrivateRoute><Proveedores /></PrivateRoute>} />
           <Route 
             path="/home" 
             element={

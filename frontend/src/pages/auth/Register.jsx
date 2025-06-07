@@ -91,7 +91,6 @@ const Register = () => {
             name="email"
             label="Correo electrónico"
             rules={[
-              { required: true, message: 'Por favor ingresa tu correo' },
               { type: 'email', message: 'Correo no válido' }
             ]}
             style={{ marginBottom: 16 }}
