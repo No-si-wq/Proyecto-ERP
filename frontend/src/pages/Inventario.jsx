@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Table, Button, Modal, Form, Input, InputNumber, message } from "antd";
+import { useNavigate } from 'react-router-dom';
 
 const Inventario = () => {
+  const navigate = useNavigate();
   const [productos, setProductos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -73,6 +75,9 @@ const Inventario = () => {
         alignItems: 'center',
         padding: 24,
       }}>
+      <Button type="default" onClick={() => navigate('/home')} style={{ marginBottom: 16 }}>
+        Ir al inicio
+      </Button>
       <Button type="primary" onClick={() => setModalVisible(true)} style={{ marginBottom: 16 }}>
         Añadir Producto
       </Button>

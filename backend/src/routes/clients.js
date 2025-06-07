@@ -15,10 +15,10 @@ router.get('/', async (req, res) => {
 
 // Crear cliente
 router.post('/', async (req, res) => {
-  const { name, email, phone, address } = req.body;
+  const { name, rtn, email, phone, address } = req.body;
   try {
     const client = await prisma.client.create({
-      data: { name, email, phone, address }
+      data: { name, rtn, email, phone, address }
     });
     res.status(201).json(client);
   } catch (err) {

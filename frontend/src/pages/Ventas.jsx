@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Table, Button, Modal, Form, InputNumber, message, Select, Input } from "antd";
+import { useNavigate } from 'react-router-dom';
 
 const Ventas = () => {
+  const navigate = useNavigate();
   const [ventas, setVentas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -123,6 +125,9 @@ const Ventas = () => {
       alignItems: 'center',
       padding: 24,
     }}>
+      <Button type="default" onClick={() => navigate('/home')} style={{ marginBottom: 16 }}>
+        Ir al inicio
+      </Button>
       <Button type="primary" onClick={() => setModalVisible(true)} style={{ marginBottom: 16 }}>
         Registrar Venta
       </Button>

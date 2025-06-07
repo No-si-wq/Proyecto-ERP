@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { Table, Modal, Button, Typography } from "antd";
+import { useNavigate } from 'react-router-dom';
 
 const { Title, Text } = Typography;
 
 const Facturas = () => {
+  const navigate = useNavigate();
   const [facturas, setFacturas] = useState([]);
   const [visible, setVisible] = useState(false);
   const [facturaSeleccionada, setFacturaSeleccionada] = useState(null);
@@ -36,6 +38,9 @@ const Facturas = () => {
 
   return (
     <div style={{ maxWidth: '100vh', width: '100%', margin: "0 auto", padding: 24 }}>
+      <Button type="default" onClick={() => navigate('/home')} style={{ marginBottom: 16 }}>
+        Ir al inicio
+      </Button>
       <Title level={2}>Documentos</Title>
       <Table 
         columns={columns}

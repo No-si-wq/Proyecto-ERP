@@ -15,10 +15,10 @@ router.get('/', async (req, res) => {
 
 // Crear proveedor
 router.post('/', async (req, res) => {
-  const { name, email, phone, address } = req.body;
+  const { name, rtn, email, phone, address } = req.body;
   try {
     const supplier = await prisma.supplier.create({
-      data: { name, email, phone, address }
+      data: { name, rtn, email, phone, address }
     });
     res.status(201).json(supplier);
   } catch (err) {
