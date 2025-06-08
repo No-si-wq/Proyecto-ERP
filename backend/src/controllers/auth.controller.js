@@ -1,9 +1,9 @@
-import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
+const jwt = require('jsonwebtoken');
+const dotenv = require('dotenv').config();
 
 dotenv.config();
 
-export const login = async (req, res) => {
+const login = async (req, res) => {
   const { email, password } = req.body;
   
   // 1. Validar usuario en la base de datos
@@ -21,4 +21,5 @@ export const login = async (req, res) => {
   );
 
   res.json({ token });
+  module.exports = login;
 };

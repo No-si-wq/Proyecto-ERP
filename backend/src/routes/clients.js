@@ -8,8 +8,8 @@ router.get('/', async (req, res) => {
   try {
     const clients = await prisma.client.findMany({ orderBy: { id: 'asc' } });
     res.json(clients);
-  } catch {
-    res.status(500).json({ error: 'Error al obtener clientes' });
+  } catch(error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -21,8 +21,8 @@ router.post('/', async (req, res) => {
       data: { name, rtn, email, phone, address }
     });
     res.status(201).json(client);
-  } catch (err) {
-    res.status(500).json({ error: 'Error al crear cliente' });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
   }
 });
 
