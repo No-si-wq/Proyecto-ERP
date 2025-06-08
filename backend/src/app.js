@@ -1,8 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
+require('dotenv').config();
 
 const app = express();
 app.use(cors());
@@ -17,13 +16,14 @@ const pool = new Pool({
   port: process.env.DB_PORT,
 });
 
-
-app.use('/api/auth', require('./routes/auth'));
+// Importa el router de auth y pásale el pool
+const authRouter = require('./routes/auth')(pool);
+app.use('/api/auth', authRouter);
 app.use('/api/clientes', require('./routes/clients'));
-app.use('/api/proveedores', require('./routes/supplier'));
+app.use('/api/proveedores', require('./routes/suppliers'));
 app.use('/api/invoices', require('./routes/invoices'));
 app.use('/api/purchase', require('./routes/purchase'));
 app.use('/api/inventory', require('./routes/inventory'));
-app.use('/api/reports', require('./routes/report.routes'));
+app.use('/api/reports', require('./routes/reports'));
 
 module.exports = app;
