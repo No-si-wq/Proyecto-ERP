@@ -52,9 +52,11 @@ const Inventario = () => {
   };
 
   const columns = [
-    { title: "Nombre", dataIndex: "nombre", key: "nombre" },
-    { title: "Cantidad", dataIndex: "cantidad", key: "cantidad" },
-    { title: "Precio", dataIndex: "precio", key: "precio" },
+    { title: "Nombre", dataIndex: "name", key: "name" },
+    { title: "SKU", dataIndex: "sku", key: "sku" },
+    { title: "Cantidad", dataIndex: "quantity", key: "quantity" },
+    { title: "Precio", dataIndex: "price", key: "price", render: (value) => `$${value.toFixed(2)}` },
+    { title: "Categoría", dataIndex: "category", key: "category" },
     {
       title: "Acciones",
       render: (_, record) => (
@@ -89,14 +91,20 @@ const Inventario = () => {
         onOk={() => form.submit()}
       >
         <Form form={form} onFinish={onCreate} layout="vertical">
-          <Form.Item name="nombre" label="Nombre" rules={[{ required: true }]}>
+          <Form.Item name="name" label="Nombre" rules={[{ required: true, message: 'Ingrese el nombre del producto' }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="cantidad" label="Cantidad" rules={[{ required: true, type: "number", min: 0 }]}>
+          <Form.Item name="sku" label="SKU (código único)" rules={[{ required: true, message: 'Ingrese el SKU (código único)' }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="quantity" label="Cantidad" rules={[{ required: true, type: "number", min: 0 }]}>
             <InputNumber style={{ width: "100%" }} />
           </Form.Item>
-          <Form.Item name="precio" label="Precio" rules={[{ required: true, type: "number", min: 0 }]}>
-            <InputNumber style={{ width: "100%" }} />
+          <Form.Item name="price" label="Precio" rules={[{ required: true, type: "number", min: 0 }]}>
+            <InputNumber style={{ width: "100%" }} step={0.01} />
+          </Form.Item>
+          <Form.Item name="category" label="Categoría" rules={[]}>
+            <Input />
           </Form.Item>
         </Form>
       </Modal>

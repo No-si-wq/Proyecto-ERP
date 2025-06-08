@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Table, Button, Modal, Form, Input, message } from "antd";
+import { Table, Button, Modal, Form, Input, message, InputNumber } from "antd";
 import { useNavigate } from 'react-router-dom';
 
 const Clientes = () => {

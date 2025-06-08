@@ -15,7 +15,7 @@ const Compras = () => {
   const fetchCompras = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/Purchase");
+      const res = await fetch("/api/compras");
       const data = await res.json();
       setCompras(data);
     } catch {
@@ -38,7 +38,7 @@ const Compras = () => {
   // Obtener productos
   const fetchProductos = async () => {
     try {
-      const res = await fetch("/api/productos");
+      const res = await fetch("/api/inventario");
       const data = await res.json();
       setProductos(data);
     } catch {

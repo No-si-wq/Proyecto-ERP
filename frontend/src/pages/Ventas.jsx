@@ -38,7 +38,7 @@ const Ventas = () => {
   // Obtener productos
   const fetchProductos = async () => {
     try {
-      const res = await fetch("/api/productos");
+      const res = await fetch("/api/inventario");
       const data = await res.json();
       setProductos(data);
     } catch {
@@ -75,7 +75,7 @@ const Ventas = () => {
   // Crear nueva venta
   const onCreate = async (values) => {
     try {
-      await fetch("/api/Invoice", {
+      await fetch("/api/ventas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
@@ -103,6 +103,7 @@ const Ventas = () => {
   const columns = [
     { title: "Cliente", dataIndex: "cliente", key: "cliente" },
     { title: "Producto", dataIndex: "producto", key: "producto" },
+    { title: "Precio", dataIndex: "price", key: "price" },
     { title: "Cantidad", dataIndex: "cantidad", key: "cantidad" },
     { title: "Total", dataIndex: "total", key: "total" },
     {

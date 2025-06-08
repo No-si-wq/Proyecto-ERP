@@ -21,9 +21,9 @@ const authRouter = require('./routes/auth')(pool);
 app.use('/api/auth', authRouter);
 app.use('/api/clientes', require('./routes/clients'));
 app.use('/api/proveedores', require('./routes/suppliers'));
-app.use('/api/invoices', require('./routes/invoices'));
-app.use('/api/purchase', require('./routes/purchase'));
-app.use('/api/inventory', require('./routes/inventory'));
+app.use('/api/ventas', require('./routes/invoices'));
+app.use('/api/compras', require('./routes/purchase'));
+app.use('/api/inventario', require('./routes/inventory'));
 app.use('/api/reports', require('./routes/reports'));
 
 module.exports = app;
