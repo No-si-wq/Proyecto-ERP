@@ -10,6 +10,7 @@ import Compras from './pages/Compras';
 import Ventas from './pages/Ventas';
 import Inventario from './pages/Inventario';
 import Clientes from "./pages/Clientes";
+import Reportes from "./pages/Reportes";
 import Proveedores from "./pages/Proveedores";
 import PrivateRoute from './components/PrivateRoute';
 import { AuthProvider } from './hooks/AuthProvider';
@@ -26,6 +27,7 @@ function App() {
           <Route path="/inventario" element={<PrivateRoute><Inventario /></PrivateRoute>} />
           <Route path="/clientes" element={<PrivateRoute><Clientes /></PrivateRoute>} />
           <Route path="/proveedores" element={<PrivateRoute><Proveedores /></PrivateRoute>} />
+          <Route path="/reportes" element={<PrivateRoute><Reportes /></PrivateRoute>} />
           <Route 
             path="/home" 
             element={

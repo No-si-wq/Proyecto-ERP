@@ -45,6 +45,12 @@ const modules = [
     icon: <TeamOutlined style={{ fontSize: 36, color: "#722ed1" }} />,
     path: "/proveedores",
   },
+  {
+    title: "Reportes",
+    description: "Visualiza reportes de compras, ventas y ganancias.",
+    icon: <BarChartOutlined style={{ fontSize: 36, color: "#13c2c2" }} />,
+    path: "/reportes",
+  },
 ];
 
 const Home = () => {
