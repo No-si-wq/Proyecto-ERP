@@ -34,12 +34,6 @@ const modules = [
     path: "/inventario",
   },
   {
-    title: "Documentos",
-    description: "Visualiza todos tus Documentos.",
-    icon: <FileTextOutlined style={{ fontSize: 36, color: "#722ed1" }} />,
-    path: "/facturas",
-  },
-  {
     title: "Clientes",
     description: "Accede aquí para gestionar y visualizar todos tus clientes.",
     icon: <UserOutlined style={{ fontSize: 36, color: "#722ed1" }} />,

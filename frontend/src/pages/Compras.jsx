@@ -104,6 +104,7 @@ const Compras = () => {
   const columns = [
     { title: "Proveedor", dataIndex: "proveedor", key: "proveedor" },
     { title: "Producto", dataIndex: "producto", key: "producto" },
+    { title: "Precio", dataIndex: "price", key: "price" },
     { title: "Cantidad", dataIndex: "cantidad", key: "cantidad" },
     { title: "Total", dataIndex: "total", key: "total" },
     {

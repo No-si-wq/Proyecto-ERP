@@ -9,7 +9,6 @@ import Home from './pages/Home';
 import Compras from './pages/Compras';
 import Ventas from './pages/Ventas';
 import Inventario from './pages/Inventario';
-import Facturas from "./pages/Factura";
 import Clientes from "./pages/Clientes";
 import Proveedores from "./pages/Proveedores";
 import PrivateRoute from './components/PrivateRoute';
@@ -24,7 +23,6 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/ventas" element={<PrivateRoute><Ventas /></PrivateRoute>} />
           <Route path="/compras" element={<PrivateRoute><Compras /></PrivateRoute>} />
-          <Route path="/facturas" element={<PrivateRoute><Facturas /></PrivateRoute>} />
           <Route path="/inventario" element={<PrivateRoute><Inventario /></PrivateRoute>} />
           <Route path="/clientes" element={<PrivateRoute><Clientes /></PrivateRoute>} />
           <Route path="/proveedores" element={<PrivateRoute><Proveedores /></PrivateRoute>} />

@@ -125,6 +125,36 @@ router.get('/compras', async (req, res) => {
         }
       }
     };
+  
+// ...tus requires y código existente arriba...
+
+router.get('/datos', async (req, res) => {
+  const { from, to } = req.query;
+  if (!from || !to) {
+    return res.status(400).json({ message: 'Debe especificar los parámetros from y to (YYYY-MM-DD)' });
+  }
+  try {
+    const ventas = await prisma.invoice.findMany({
+      where: {
+        createdAt: { gte: new Date(from), lte: new Date(to) }
+      },
+      include: { client: true },
+      orderBy: { createdAt: 'asc' }
+    });
+    const compras = await prisma.purchase.findMany({
+      where: {
+        createdAt: { gte: new Date(from), lte: new Date(to) }
+      },
+      include: { supplier: true },
+      orderBy: { createdAt: 'asc' }
+    });
+
+    res.json({ ventas, compras });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error al obtener los datos' });
+  }
+});
 
     const printer = new pdfmake(fonts);
     const pdfDoc = printer.createPdfKitDocument(docDefinition);

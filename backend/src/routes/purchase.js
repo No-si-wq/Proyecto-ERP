@@ -1,97 +1,122 @@
-const express = require('express');
-const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+  const express = require('express');
+  const router = express.Router();
+  const { PrismaClient } = require('@prisma/client');
+  const prisma = new PrismaClient();
 
-// Obtener todas las compras
-router.get('/', async (req, res) => {
-  try {
-    const purchases = await prisma.purchase.findMany({
-      include: { items: { include: { product: true } }, supplier: true }
-    });
-    res.json(purchases);
-  } catch (err) {
-    res.status(500).send('Error al obtener compras');
-  }
-});
-
-// Registrar compra y actualizar inventario
-router.post('/', async (req, res) => {
-  const { supplierId, items } = req.body;
-  try {
-    // Validar proveedor
-    const supplier = await prisma.supplier.findUnique({ where: { id: supplierId } });
-    if (!supplier) {
-      return res.status(400).json({ error: `Proveedor con id ${supplierId} no existe` });
-    }
-
-    // Validar productos
-    for (const item of items) {
-      const product = await prisma.product.findUnique({ where: { id: item.productId } });
-      if (!product) {
-        return res.status(400).json({ error: `Producto con id ${item.productId} no existe` });
+  // Registrar una compra (factura de compra)
+  router.post('/', async (req, res) => {
+    const { supplierId, productoId, cantidad, price } = req.body;
+    try {
+      // Validar producto y stock
+      const product = await prisma.product.findUnique({ where: { id: productoId } });
+      if (product.quantity < cantidad) {
+        return res.status(400).json({ error: `Stock insuficiente para el producto ${product.name}` });
       }
-    }
 
-    const total = items.reduce((sum, item) => sum + item.quantity * item.price, 0);
+      const total = cantidad * price;
 
-    // Crear la compra y sus items
-    const purchase = await prisma.purchase.create({
-      data: {
-        supplierId,
-        total,
-        items: {
-          create: items.map(item => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            price: item.price,
-            subtotal: item.quantity * item.price,
-          })),
+      // Crear la factura con un solo item
+      const purchase = await prisma.purchase.create({
+        data: {
+          supplierId: supplierId,
+          total: total,
+          items: {
+            create: [{
+              productId: productoId,
+              quantity: cantidad,
+              price: price,
+              subtotal: cantidad * price,
+            }],
+          },
         },
-      },
-      include: { items: true, supplier: true },
-    });
-
-    // Actualizar inventario (sumar)
-    for (const item of items) {
-      await prisma.product.update({
-        where: { id: item.productId },
-        data: { quantity: { increment: item.quantity } },
+        include: { items: { include: { product: true } }, supplier: true },
       });
-    }
 
-    res.status(201).json(purchase);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Error al registrar la compra' });
-  }
-});
-
-// Eliminar compra y restar stock (opcional)
-router.delete('/:id', async (req, res) => {
-  const id = Number(req.params.id);
-  try {
-    // Busca la compra y sus items
-    const purchase = await prisma.purchase.findUnique({
-      where: { id },
-      include: { items: true }
-    });
-    if (!purchase) return res.sendStatus(404);
-
-    // Resta el inventario de los productos
-    for (const item of purchase.items) {
+      // Actualizar inventario
       await prisma.product.update({
-        where: { id: item.productId },
-        data: { quantity: { decrement: item.quantity } },
+        where: { id: productoId },
+        data: { quantity: { increment: cantidad } },
       });
+
+      // Retornar la venta en formato compatible con el frontend
+      res.status(201).json({
+        id: purchase.id,
+        proveedor: purchase.supplier.name,
+        producto: purchase.items[0].product.name,
+        price: purchase.items[0].price,
+        cantidad: purchase.items[0].quantity,
+        total: purchase.total,
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Error al registrar la venta y generar la factura' });
     }
+  });
 
-    // Elimina la compra (cascade debe estar activo o elimina manualmente items primero)
-    await prisma.purchase.delete({ where: { id } });
-    res.sendStatus(200);
-  } catch (err) {
-    res.status(500).send('Error al eliminar compra');
-  }
-});
+  // Obtener todas las ventas en formato para tabla del frontend
+  router.get('/', async (req, res) => {
+    try {
+      const purchase = await prisma.purchase.findMany({
+        include: {
+          supplier: true,
+          items: {
+            include: {
+              product: true,
+            },
+          },
+        },
+        orderBy: { id: 'desc' },
+      });
 
-module.exports = router;
+      // Transformar datos: una fila por factura (asumiendo solo un producto por factura)
+      const compras = purchase.map(inv => {
+        const item = inv.items[0]; // solo uno por venta en este diseño
+        return {
+          id: inv.id,
+          proveedor: inv.supplier.name,
+          producto: item?.product?.name || "",
+          price: item?.price || 0,
+          cantidad: item?.quantity || 0,
+          total: inv.total,
+        };
+      });
+
+      res.json(compras);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Error al obtener las compras' });
+    }
+  });
+
+  // Eliminar venta
+  router.delete('/:id', async (req, res) => {
+    try {
+      // Obtener la venta y los items para revertir stock
+      const purchase = await prisma.purchase.findUnique({
+        where: { id: parseInt(req.params.id) },
+        include: { items: true }
+      });
+
+      if (!purchase) {
+        return res.status(404).json({ error: "Venta no encontrada" });
+      }
+
+      // Revertir stock de cada producto del item
+      for (const item of purchase.items) {
+        await prisma.product.update({
+          where: { id: item.productId },
+          data: { quantity: { decrement: item.quantity } },
+        });
+      }
+
+      // Eliminar la venta
+      await prisma.purchase.delete({ where: { id: purchase.id } });
+
+      res.sendStatus(200);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Error al eliminar la compra" });
+    }
+  });
+
+  module.exports = router;
