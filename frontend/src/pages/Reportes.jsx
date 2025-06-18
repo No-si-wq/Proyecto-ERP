@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { DatePicker, Button, Card, Typography, message, Space, Table, Tag } from "antd";
 import dayjs from "dayjs";
+import { useNavigate } from 'react-router-dom';
 
 const hoy = dayjs(); // Fecha y hora actual
 console.log(hoy.format("YYYY-MM-DD")); // Muestra la fecha en formato año-mes-día
@@ -8,6 +9,7 @@ const { RangePicker } = DatePicker;
 const { Title } = Typography;
 
 export default function Reportes() {
+  const navigate = useNavigate();
   const [dates, setDates] = useState([]);
   const [ventas, setVentas] = useState([]);
   const [compras, setCompras] = useState([]);
@@ -60,6 +62,9 @@ export default function Reportes() {
 
   return (
     <Card>
+      <Button type="default" onClick={() => navigate('/home')} style={{ marginBottom: 16 }}>
+        Ir al inicio
+      </Button>
       <Title level={2}>Reportes de Compras y Ventas</Title>
       <Space style={{ marginBottom: 16 }}>
         <RangePicker

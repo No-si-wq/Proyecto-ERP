@@ -20,6 +20,7 @@ const pool = new Pool({
 const authRouter = require('./routes/auth')(pool);
 app.use('/api/auth', authRouter);
 app.use('/api/clientes', require('./routes/clients'));
+app.use('/api/reportes', require('./routes/reports'));
 app.use('/api/proveedores', require('./routes/suppliers'));
 app.use('/api/ventas', require('./routes/invoices'));
 app.use('/api/compras', require('./routes/purchase'));

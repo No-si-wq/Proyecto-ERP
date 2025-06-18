@@ -7,11 +7,14 @@
   router.post('/', async (req, res) => {
     const { clienteId, productoId, cantidad, price } = req.body;
     try {
-      // Validar producto y stock
-      const product = await prisma.product.findUnique({ where: { id: productoId } });
-      if (product.quantity < cantidad) {
-        return res.status(400).json({ error: `Stock insuficiente para el producto ${product.name}` });
-      }
+          // Validar producto y stock
+          const product = await prisma.product.findUnique({ where: { id: productoId } });
+          if (!product) {
+            return res.status(400).json({ error: `Producto con id ${productoId} no existe` });
+          }
+          if (product.quantity < cantidad) {
+            return res.status(400).json({ error: `Stock insuficiente para el producto ${product.name}` });
+          }
 
       const total = cantidad * price;
 

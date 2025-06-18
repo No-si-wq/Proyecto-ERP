@@ -7,7 +7,7 @@ import {
   ShoppingCartOutlined,
   DollarOutlined,
   AppstoreOutlined,
-  FileTextOutlined,
+  BarChartOutlined,
   UserOutlined,
   TeamOutlined,
 } from '@ant-design/icons';

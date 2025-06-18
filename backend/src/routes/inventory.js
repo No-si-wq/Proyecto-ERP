@@ -14,52 +14,32 @@ router.get('/', async (req, res) => {
 
 // Crear nuevo producto
 router.post('/', async (req, res) => {
-  const { clienteId, productoId, cantidad, price } = req.body;
+  const { name, sku, quantity, price, category } = req.body;
+  if (!name || !sku || typeof quantity !== 'number' || typeof price !== 'number') {
+    return res.status(400).send('Faltan campos obligatorios');
+  }
   try {
-    // Validar cliente
-    const client = await prisma.client.findUnique({ where: { id: clienteId } });
-    if (!client) {
-      return res.status(400).json({ error: `Cliente con id ${clienteId} no existe` });
-    }
-
-    // Validar producto y stock
-    const product = await prisma.product.findUnique({ where: { id: productoId } });
-    if (!product) {
-      return res.status(400).json({ error: `Producto con id ${productoId} no existe` });
-    }
-    if (product.quantity < cantidad) {
-      return res.status(400).json({ error: `Stock insuficiente para el producto ${product.name}` });
-    }
-
-    const total = cantidad * price;
-
-    // Crear la factura con un solo item
-    const invoice = await prisma.invoice.create({
-      data: {
-        clientId: clienteId,
-        total: total,
-        items: {
-          create: [{
-            productId: productoId,
-            quantity: cantidad,
-            price: price,
-            subtotal: cantidad * price,
-          }],
-        },
-      },
-      include: { items: true, client: true },
-    });
-
-    // Actualizar inventario
-    await prisma.product.update({
-      where: { id: productoId },
-      data: { quantity: { decrement: cantidad } },
-    });
-
-    res.status(201).json(invoice);
+    await db.query(
+      'INSERT INTO "Product" (name, sku, quantity, price, category) VALUES ($1, $2, $3, $4, $5)',
+      [name, sku, quantity, price, category || null]
+    );
+    res.sendStatus(201);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Error al registrar la venta y generar la factura' });
+    if (err.code === '23505') { // Unique violation for sku
+      res.status(409).send('El SKU ya existe');
+    } else {
+      res.status(500).send('Error al agregar producto');
+    }
+  }
+});
+
+// Eliminar producto
+router.delete('/:id', async (req, res) => {
+  try {
+    await db.query('DELETE FROM "Product" WHERE id=$1', [req.params.id]);
+    res.sendStatus(200);
+  } catch (err) {
+    res.status(500).send('Error al eliminar producto');
   }
 });
 
