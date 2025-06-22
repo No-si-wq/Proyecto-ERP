@@ -1,10 +1,8 @@
 import React, { useState } from "react";
-import { DatePicker, Button, Card, Typography, message, Space, Table, Tag } from "antd";
+import { DatePicker, Button, Card, Typography, message, Space, Table } from "antd";
 import dayjs from "dayjs";
 import { useNavigate } from 'react-router-dom';
 
-const hoy = dayjs(); // Fecha y hora actual
-console.log(hoy.format("YYYY-MM-DD")); // Muestra la fecha en formato año-mes-día
 const { RangePicker } = DatePicker;
 const { Title } = Typography;
 
@@ -13,7 +11,6 @@ export default function Reportes() {
   const [dates, setDates] = useState([]);
   const [ventas, setVentas] = useState([]);
   const [compras, setCompras] = useState([]);
-  const [ganancias, setGanancias] = useState(null);
   const [loadingDatos, setLoadingDatos] = useState(false);
 
   const columnsVentas = [
@@ -41,24 +38,47 @@ export default function Reportes() {
     const from = dates[0].format("YYYY-MM-DD");
     const to = dates[1].format("YYYY-MM-DD");
     try {
-      // Obtener ventas y compras
       const datosRes = await fetch(`/api/reports/datos?from=${from}&to=${to}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
       });
       const datos = await datosRes.json();
       setVentas(datos.ventas || []);
       setCompras(datos.compras || []);
-      // Obtener ganancias
-      const gananciasRes = await fetch(`/api/reports/ganancias?from=${from}&to=${to}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-      });
-      const gananciasData = await gananciasRes.json();
-      setGanancias(gananciasData);
     } catch {
       message.error("Error al obtener los datos");
     }
     setLoadingDatos(false);
   };
+
+  const descargarPDF = (tipo) => {
+    if (!dates || dates.length < 2) {
+      message.warning("Selecciona un rango de fechas");
+      return;
+    }
+    const from = dates[0].format("YYYY-MM-DD");
+    const to = dates[1].format("YYYY-MM-DD");
+    fetch(`/api/reports/${tipo}?from=${from}&to=${to}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('No se pudo descargar el PDF');
+        return res.blob();
+      })
+      .then(blob => {
+        const url = window.URL.createObjectURL(new Blob([blob]));
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `reporte_${tipo}_${from}_a_${to}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      })
+      .catch(() => message.error("Error al descargar el PDF"));
+  };
+
+  // Calcular totales
+  const totalVentas = ventas.reduce((sum, v) => sum + (v.total || 0), 0);
+  const totalCompras = compras.reduce((sum, c) => sum + (c.total || 0), 0);
 
   return (
     <Card>
@@ -75,6 +95,12 @@ export default function Reportes() {
         <Button type="primary" onClick={consultarDatos} loading={loadingDatos}>
           Consultar
         </Button>
+        <Button onClick={() => descargarPDF("ventas")} type="dashed">
+          Descargar PDF Ventas
+        </Button>
+        <Button onClick={() => descargarPDF("compras")} type="dashed">
+          Descargar PDF Compras
+        </Button>
       </Space>
       <Card title="Ventas" style={{ marginTop: 24 }}>
         <Table dataSource={ventas} columns={columnsVentas} rowKey="id" pagination={false} />
@@ -82,19 +108,17 @@ export default function Reportes() {
       <Card title="Compras" style={{ marginTop: 24 }}>
         <Table dataSource={compras} columns={columnsCompras} rowKey="id" pagination={false} />
       </Card>
-      {ganancias && (
-        <Card style={{ marginTop: 24 }}>
-          <Title level={4}>
-            Total Ventas: <span style={{ color: "#389e0d" }}>${ganancias.totalVentas?.toFixed(2) ?? "0.00"}</span>
-            <br />
-            Total Compras: <span style={{ color: "#cf1322" }}>${ganancias.totalCompras?.toFixed(2) ?? "0.00"}</span>
-            <br />
-            <Tag color={ganancias.ganancia >= 0 ? "green" : "red"}>
-              {ganancias.status}: ${ganancias.ganancia?.toFixed(2) ?? "0.00"}
-            </Tag>
-          </Title>
-        </Card>
-      )}
+      <Card style={{ marginTop: 24 }}>
+        <Title level={4}>
+          Total Ventas: <span style={{ color: "#389e0d" }}>${totalVentas.toFixed(2)}</span>
+          <br />
+          Total Compras: <span style={{ color: "#cf1322" }}>${totalCompras.toFixed(2)}</span>
+          <br />
+          Diferencia: <span style={{ color: totalVentas - totalCompras >= 0 ? "green" : "red" }}>
+            ${(totalVentas - totalCompras).toFixed(2)}
+          </span>
+        </Title>
+      </Card>
     </Card>
   );
 }
