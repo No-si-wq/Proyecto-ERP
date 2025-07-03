@@ -2,6 +2,10 @@ import React, { useEffect, useState } from "react";
 import { Layout, Menu, Button, Table, InputNumber, Select, message, Typography, Space } from "antd";
 import { PlusOutlined, DeleteOutlined, ShoppingCartOutlined, DollarOutlined, SaveOutlined, ReloadOutlined, UserAddOutlined } from "@ant-design/icons";
 import { useNavigate } from 'react-router-dom';
+import ConfirmarVentaCard from "../components/ConfirmarVentaCard";
+import RecibidoEfectivoCard from "../components/RecibidoEfectivoCard";
+
+import { Modal } from "antd";
 import ClienteForm from "../components/ClienteForm";
 
 const { Header, Content } = Layout;
@@ -16,6 +20,7 @@ const Ventas = () => {
   const [modalCliente, setModalCliente] = useState(false);
   const [clienteLoading, setClienteLoading] = useState(false);
   const [loading, setLoading] = useState(false);
+  
 
   // Cargar clientes y productos
   useEffect(() => {
