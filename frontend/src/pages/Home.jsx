@@ -10,6 +10,15 @@ import {
   TeamOutlined,
   FileAddOutlined,
   FileSearchOutlined,
+  FolderOpenOutlined,
+  BankOutlined,
+  ShopOutlined,
+  CreditCardOutlined,
+  DesktopOutlined,
+  ApartmentOutlined,
+  TagsOutlined,
+  GlobalOutlined,
+  FileOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/AuthProvider";
@@ -17,72 +26,58 @@ import { useAuth } from "../hooks/AuthProvider";
 const { Header, Content } = Layout;
 const { Title, Text } = Typography;
 
-// Define your ribbon structure and routes here:
 const modules = [
   {
     key: "ventas",
     title: "Ventas",
     icon: <DollarOutlined />,
     submenu: [
-      {
-        key: "ventas",
-        title: "Panel de ventas",
-        icon: <FileAddOutlined />,
-        path: "/ventas",
-      },
-      {
-        key: "clientes",
-        title: "Clientes",
-        icon: <UserOutlined />,
-        path: "/clientes",
-      },
-    ],
+      { key: "ventas", title: "Panel de ventas", icon: <FileAddOutlined />, path: "/ventas" },
+      { key: "clientes", title: "Clientes", icon: <UserOutlined />, path: "/clientes" }
+    ]
   },
   {
     key: "compras",
     title: "Compras",
     icon: <ShoppingCartOutlined />,
     submenu: [
-      {
-        key: "compras",
-        title: "Panel de compras",
-        icon: <FileAddOutlined />,
-        path: "/compras",
-      },
-      {
-        key: "proveedores",
-        title: "Proveedores",
-        icon: <TeamOutlined />,
-        path: "/proveedores",
-      },
-    ],
+      { key: "compras", title: "Panel de compras", icon: <FileAddOutlined />, path: "/compras" },
+      { key: "proveedores", title: "Proveedores", icon: <TeamOutlined />, path: "/proveedores" }
+    ]
+  },
+  // NUEVO MENÚ DE CATÁLOGOS
+  {
+    key: "catalogos",
+    title: "Catálogos",
+    icon: <FolderOpenOutlined />,
+    submenu: [
+      { key: "tiendas", title: "Tiendas", icon: <ShopOutlined />, path: "/tiendas" },
+      { key: "usuarios", title: "Usuarios", icon: <UserOutlined />, path: "/usuarios" },
+      { key: "formas-pago", title: "Formas de pago", icon: <CreditCardOutlined />, path: "/formas-pago" },
+      { key: "dispositivos", title: "Dispositivos", icon: <DesktopOutlined />, path: "/dispositivos" },
+      { key: "lineas", title: "Líneas", icon: <ApartmentOutlined />, path: "/lineas" },
+      { key: "departamentos", title: "Departamentos", icon: <TagsOutlined />, path: "/departamentos" },
+      { key: "categorias", title: "Categorías", icon: <FileOutlined />, path: "/categorias" },
+      { key: "monedas", title: "Monedas", icon: <GlobalOutlined />, path: "/monedas" },
+      // Puedes agregar más catálogos aquí
+    ]
   },
   {
     key: "inventario",
     title: "Inventario",
     icon: <AppstoreOutlined />,
     submenu: [
-      {
-        key: "inventario",
-        title: "Panel de inventario",
-        icon: <FileSearchOutlined />,
-        path: "/inventario",
-      },
-    ],
+      { key: "inventario", title: "Panel de inventario", icon: <FileSearchOutlined />, path: "/inventario" }
+    ]
   },
   {
     key: "reportes",
     title: "Reportes",
     icon: <BarChartOutlined />,
     submenu: [
-      {
-        key: "reportes",
-        title: "Panel de reportes",
-        icon: <BarChartOutlined />,
-        path: "/reportes",
-      },
-    ],
-  },
+      { key: "reportes", title: "Panel de reportes", icon: <BarChartOutlined />, path: "/reportes" }
+    ]
+  }
 ];
 
 const Home = () => {
@@ -110,7 +105,6 @@ const Home = () => {
     navigate("/login");
   };
 
-  // Show welcome message only if still at /home
   const isWelcome = location.pathname === "/home";
 
   return (

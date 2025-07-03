@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Button, Modal, Form, Input, message, Space, Popconfirm } from 'antd';
+import { useNavigate } from 'react-router-dom';
 
 const Categorias = () => {
+  const navigate = useNavigate();
   const [categorias, setCategorias] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -77,6 +79,10 @@ const Categorias = () => {
 
   return (
     <div style={{ padding: 24, maxWidth: 600, margin: 'auto' }}>
+      <Button type="default" onClick={() => navigate('/home')} style={{ marginBottom: 16 }}>
+        Ir al inicio
+      </Button>
+      <br />      
       <Button type="primary" onClick={() => { setEditing(null); setModalVisible(true); form.resetFields(); }} style={{ marginBottom: 16 }}>
         Añadir Categoría
       </Button>

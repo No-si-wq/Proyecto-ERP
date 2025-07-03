@@ -26,6 +26,7 @@ app.use('/api/ventas', require('./routes/invoices'));
 app.use('/api/compras', require('./routes/purchase'));
 app.use('/api/inventario', require('./routes/inventory'));
 app.use('/api/reports', require('./routes/reports'));
+app.use('/api/usuarios', require('./routes/users'));
 app.use('/api/categorias', categoriesRoutes);
 
 module.exports = app;

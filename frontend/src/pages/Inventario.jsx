@@ -11,10 +11,18 @@ const { TabPane } = Tabs;
 const Inventario = () => {
   const navigate = useNavigate();
   const [productos, setProductos] = useState([]);
+  const [categorias, setCategorias] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [form] = Form.useForm();
 
+  // Obtener productos y categorías al cargar la página
+  useEffect(() => {
+    fetchProductos();
+    fetchCategorias();
+  }, []);
+
+  // Trae los productos
   const fetchProductos = async () => {
     setLoading(true);
     try {
@@ -27,12 +35,7 @@ const Inventario = () => {
     setLoading(false);
   };
 
-  const [categorias, setCategorias] = useState([]);
-  useEffect(() => {
-    fetchProductos();
-    fetchCategorias();
-  }, []);
-
+  // Trae las categorías
   const fetchCategorias = async () => {
     try {
       const res = await fetch('/api/categorias');
@@ -43,16 +46,18 @@ const Inventario = () => {
     }
   };
 
-  useEffect(() => {
-    fetchProductos();
-  }, []);
-
+  // Crear producto
   const onCreate = async (values) => {
     try {
+      // categoryId debe ser número
+      const dataToSend = {
+        ...values,
+        categoryId: Number(values.categoryId)
+      };
       await fetch("/api/inventario", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: JSON.stringify(dataToSend),
       });
       message.success("Producto añadido");
       setModalVisible(false);
@@ -63,6 +68,7 @@ const Inventario = () => {
     }
   };
 
+  // Eliminar producto
   const onDelete = async (id) => {
     try {
       await fetch(`/api/inventario/${id}`, { method: "DELETE" });
@@ -73,12 +79,18 @@ const Inventario = () => {
     }
   };
 
+  // Mostrar nombre de la categoría en la tabla
   const columns = [
     { title: "Nombre", dataIndex: "name", key: "name" },
     { title: "SKU", dataIndex: "sku", key: "sku" },
     { title: "Cantidad", dataIndex: "quantity", key: "quantity" },
     { title: "Precio", dataIndex: "price", key: "price", render: (value) => `$${value.toFixed(2)}` },
-    { title: "Categoría", dataIndex: "category", key: "category" },
+    {
+      title: "Categoría",
+      dataIndex: "category",
+      key: "category",
+      render: (category) => category?.name || "Sin categoría"
+    },
     {
       title: "Acciones",
       render: (_, record) => (
@@ -89,7 +101,7 @@ const Inventario = () => {
     },
   ];
 
-  // Ribbon actions (puedes expandir esto en el futuro)
+  // Ribbon de acciones (puedes personalizar los tabs)
   const ribbonActions = (
     <Tabs defaultActiveKey="1" type="card" style={{ marginBottom: 16 }}>
       <TabPane tab={<span><AppstoreOutlined />Archivo</span>} key="1">
@@ -138,13 +150,19 @@ const Inventario = () => {
     >
       <div style={{ width: '100%', maxWidth: 1200 }}>
         {ribbonActions}
-        <Table columns={columns} dataSource={productos} loading={loading} rowKey="id" />
+        <Table
+          columns={columns}
+          dataSource={productos}
+          loading={loading}
+          rowKey="id"
+        />
       </div>
       <Modal
         title="Añadir Producto"
         open={modalVisible}
         onCancel={() => setModalVisible(false)}
         onOk={() => form.submit()}
+        destroyOnClose
       >
         <Form form={form} onFinish={onCreate} layout="vertical">
           <Form.Item name="name" label="Nombre" rules={[{ required: true, message: 'Ingrese el nombre del producto' }]}>
