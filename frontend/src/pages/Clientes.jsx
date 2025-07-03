@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { Table, Button, Modal, Form, Input, message, InputNumber } from "antd";
+import { Table, Button, message } from "antd";
 import { useNavigate } from 'react-router-dom';
+import ClienteForm from "../components/ClienteForm";
 
 const Clientes = () => {
   const navigate = useNavigate();
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [form] = Form.useForm();
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   const fetchClientes = async () => {
     setLoading(true);
@@ -26,6 +27,7 @@ const Clientes = () => {
   }, []);
 
   const onCreate = async (values) => {
+    setConfirmLoading(true);
     try {
       await fetch("/api/clientes", {
         method: "POST",
@@ -34,11 +36,11 @@ const Clientes = () => {
       });
       message.success("Cliente creado");
       setModalVisible(false);
-      form.resetFields();
       fetchClientes();
     } catch {
       message.error("No se pudo crear el cliente");
     }
+    setConfirmLoading(false);
   };
 
   const columns = [
@@ -59,21 +61,12 @@ const Clientes = () => {
         Nuevo Cliente
       </Button>
       <Table columns={columns} dataSource={clientes} loading={loading} rowKey="id" />
-      <Modal
-        title="Nuevo Cliente"
-        open={modalVisible}
+      <ClienteForm
+        visible={modalVisible}
+        onCreate={onCreate}
         onCancel={() => setModalVisible(false)}
-        onOk={() => form.submit()}
-        destroyOnClose
-      >
-        <Form form={form} onFinish={onCreate} layout="vertical">
-          <Form.Item name="name" label="Nombre" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="rtn" label="RTN" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="email" label="Correo"><Input /></Form.Item>
-          <Form.Item name="phone" label="Teléfono" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="address" label="Dirección" rules={[{ required: true }]}><Input /></Form.Item>
-        </Form>
-      </Modal>
+        confirmLoading={confirmLoading}
+      />
     </div>
   );
 };

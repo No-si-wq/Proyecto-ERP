@@ -1,134 +1,199 @@
-import React from 'react';
-import { Button, Typography, Card, Row, Col, Divider } from 'antd';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/AuthProvider';
+import React, { useState } from "react";
+import { Layout, Menu, Typography, Button } from "antd";
 import {
   LogoutOutlined,
-  ShoppingCartOutlined,
   DollarOutlined,
+  ShoppingCartOutlined,
   AppstoreOutlined,
   BarChartOutlined,
   UserOutlined,
   TeamOutlined,
-} from '@ant-design/icons';
+  FileAddOutlined,
+  FileSearchOutlined,
+} from "@ant-design/icons";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../hooks/AuthProvider";
 
+const { Header, Content } = Layout;
 const { Title, Text } = Typography;
 
+// Define your ribbon structure and routes here:
 const modules = [
   {
+    key: "ventas",
     title: "Ventas",
-    description: "Gestiona las ventas y los clientes.",
-    icon: <DollarOutlined style={{ fontSize: 36, color: "#52c41a" }} />,
-    path: "/ventas",
+    icon: <DollarOutlined />,
+    submenu: [
+      {
+        key: "ventas",
+        title: "Panel de ventas",
+        icon: <FileAddOutlined />,
+        path: "/ventas",
+      },
+      {
+        key: "clientes",
+        title: "Clientes",
+        icon: <UserOutlined />,
+        path: "/clientes",
+      },
+    ],
   },
   {
+    key: "compras",
     title: "Compras",
-    description: "Administra las compras y proveedores.",
-    icon: <ShoppingCartOutlined style={{ fontSize: 36, color: "#1890ff" }} />,
-    path: "/compras",
+    icon: <ShoppingCartOutlined />,
+    submenu: [
+      {
+        key: "compras",
+        title: "Panel de compras",
+        icon: <FileAddOutlined />,
+        path: "/compras",
+      },
+      {
+        key: "proveedores",
+        title: "Proveedores",
+        icon: <TeamOutlined />,
+        path: "/proveedores",
+      },
+    ],
   },
   {
+    key: "inventario",
     title: "Inventario",
-    description: "Consulta y controla el inventario.",
-    icon: <AppstoreOutlined style={{ fontSize: 36, color: "#faad14" }} />,
-    path: "/inventario",
+    icon: <AppstoreOutlined />,
+    submenu: [
+      {
+        key: "inventario",
+        title: "Panel de inventario",
+        icon: <FileSearchOutlined />,
+        path: "/inventario",
+      },
+    ],
   },
   {
-    title: "Clientes",
-    description: "Accede aquí para gestionar y visualizar todos tus clientes.",
-    icon: <UserOutlined style={{ fontSize: 36, color: "#722ed1" }} />,
-    path: "/clientes",
-  },
-  {
-    title: "Proveedores",
-    description: "Accede aquí para gestionar y visualizar todos tus proveedores.",
-    icon: <TeamOutlined style={{ fontSize: 36, color: "#722ed1" }} />,
-    path: "/proveedores",
-  },
-  {
+    key: "reportes",
     title: "Reportes",
-    description: "Visualiza reportes de compras, ventas y ganancias.",
-    icon: <BarChartOutlined style={{ fontSize: 36, color: "#13c2c2" }} />,
-    path: "/reportes",
+    icon: <BarChartOutlined />,
+    submenu: [
+      {
+        key: "reportes",
+        title: "Panel de reportes",
+        icon: <BarChartOutlined />,
+        path: "/reportes",
+      },
+    ],
   },
 ];
 
 const Home = () => {
   const { setAuth } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [selectedKey, setSelectedKey] = useState(null);
+
+  const handleMenuClick = (e) => {
+    setSelectedKey(e.key);
+    for (const mod of modules) {
+      if (mod.submenu) {
+        const found = mod.submenu.find((sm) => sm.key === e.key);
+        if (found && found.path) {
+          navigate(found.path);
+          return;
+        }
+      }
+    }
+  };
 
   const handleLogout = () => {
     setAuth(false);
-    localStorage.removeItem('token');
-    navigate('/login');
+    localStorage.removeItem("token");
+    navigate("/login");
   };
 
+  // Show welcome message only if still at /home
+  const isWelcome = location.pathname === "/home";
+
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        height: '100%', 
-        width: '100%',
-        background: 'linear-gradient(135deg, #f0f5ff 0%, #fffbe6 100%)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        padding: 24,
-        paddingTop: 48,
-        boxSizing: 'border-box',
-      }}
-    >
-      <Card
+    <Layout style={{ minHeight: "100vh" }}>
+      <Header
         style={{
-          maxWidth: 600,
-          width: '100%',
-          textAlign: 'center',
-          marginTop: 0,
-          marginBottom: 40,
-          boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
+          background: "#fff",
+          display: "flex",
+          alignItems: "center",
+          boxShadow: "0 2px 8px #f0f1f2",
+          zIndex: 10,
         }}
       >
-        <Title level={2}>Panel principal ERP</Title>
-        <Text type="secondary">
-          Selecciona un módulo para comenzar.
-        </Text>
-        <br /><br />
+        <div style={{ flex: 1 }}>
+          <Menu
+            mode="horizontal"
+            selectedKeys={selectedKey ? [selectedKey] : []}
+            onClick={handleMenuClick}
+            style={{ borderBottom: "none" }}
+          >
+            {modules.map((mod) =>
+              mod.submenu ? (
+                <Menu.SubMenu
+                  key={mod.key}
+                  title={mod.title}
+                  icon={mod.icon}
+                  popupClassName="ribbon-submenu"
+                >
+                  {mod.submenu.map((sm) => (
+                    <Menu.Item key={sm.key} icon={sm.icon}>
+                      {sm.title}
+                    </Menu.Item>
+                  ))}
+                </Menu.SubMenu>
+              ) : (
+                <Menu.Item key={mod.key} icon={mod.icon}>
+                  {mod.title}
+                </Menu.Item>
+              )
+            )}
+          </Menu>
+        </div>
         <Button
           type="primary"
           danger
           icon={<LogoutOutlined />}
           onClick={handleLogout}
-          size="large"
+          style={{ marginLeft: 16 }}
         >
           Cerrar sesión
         </Button>
-      </Card>
-
-      <Row gutter={[32, 32]} style={{ maxWidth: 900, width: '100%' }} justify="center">
-        {modules.map((mod, idx) => (
-          <Col xs={24} sm={12} md={8} key={idx}>
-            <Card
-              hoverable
-              style={{ textAlign: 'center', minHeight: 210, cursor: 'pointer' }}
-              onClick={() => navigate(mod.path)}
-            >
-              {mod.icon}
-              <Title level={4} style={{ marginTop: 12 }}>{mod.title}</Title>
-              <Text>{mod.description}</Text>
-              <br />
-              <Button
-                type="primary"
-                style={{ marginTop: 10 }}
-                block
-                onClick={(e) => { e.stopPropagation(); navigate(mod.path); }}
-              >
-                Ir a {mod.title}
-              </Button>
-            </Card>
-          </Col>
-        ))}
-      </Row>
-    </div>
+      </Header>
+      <Content
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "48px 16px",
+          background: "linear-gradient(135deg, #f0f5ff 0%, #fffbe6 100%)",
+          minHeight: "calc(100vh - 64px)",
+        }}
+      >
+        {isWelcome && (
+          <div
+            style={{
+              background: "#fff",
+              padding: 48,
+              borderRadius: 12,
+              boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
+              textAlign: "center",
+              maxWidth: 600,
+              width: "100%",
+            }}
+          >
+            <Title level={2}>¡Bienvenido al ERP!</Title>
+            <Text type="secondary">
+              Selecciona un módulo o una acción en el menú superior para comenzar a trabajar en tu sistema.
+            </Text>
+          </div>
+        )}
+      </Content>
+    </Layout>
   );
 };
 
