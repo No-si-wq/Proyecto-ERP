@@ -24,10 +24,8 @@ const Ventas = () => {
   const [loading, setLoading] = useState(false);
 
   // Estados para el flujo de confirmación y recibido
-  const [modalConfirmar, setModalConfirmar] = useState(false);
   const [modalPanelPago, setModalPanelPago] = useState(false);
   const [modalRecibido, setModalRecibido] = useState(false);
-  const [ventaEnProceso, setVentaEnProceso] = useState({ subtotal: 0, impuestos: 0, total: 0 });
 
   const handleConfirmarPago = async () => {
   // Sumar todos los importes recibidos
@@ -182,8 +180,6 @@ const Ventas = () => {
       </Menu.Item>
       <Menu.Item key="guardar" icon={<SaveOutlined />} onClick={() => {
         if (carrito.length === 0 || loading) return;
-        setVentaEnProceso({ subtotal, impuestos, total: totalVenta });
-        setModalConfirmar(true);
       }} disabled={carrito.length === 0 || loading}>
         Pagar
       </Menu.Item>
@@ -236,12 +232,6 @@ const Ventas = () => {
       <Button icon={<UserAddOutlined />} onClick={() => setModalCliente(true)} />
     </Space>
   );
-
-  // Al confirmar la venta, se abre el modal de panel de formas de pago
-  const handleConfirmarVenta = () => {
-    setModalConfirmar(false);
-    setModalPanelPago(true);
-  };
 
   // Al recibir el importe, calcula el cambio, registra la venta y muestra mensaje
   const handleAceptarImporte = async (importe) => {
@@ -379,8 +369,7 @@ const Ventas = () => {
                 block
                 style={{ fontSize: 24, height: 60, marginTop: 8 }}
                 onClick={() => {
-                  setVentaEnProceso({ subtotal, impuestos, total: totalVenta });
-                  setModalConfirmar(true);
+                  setModalPanelPago(true); // Ya NO setModalConfirmar(true)
                 }}
                 disabled={carrito.length === 0 || loading}
               >
@@ -397,22 +386,6 @@ const Ventas = () => {
         onCancel={() => setModalCliente(false)}
         confirmLoading={clienteLoading}
       />
-
-      {/* MODAL CONFIRMAR VENTA */}
-      <Modal
-        open={modalConfirmar}
-        footer={null}
-        onCancel={() => setModalConfirmar(false)}
-        centered
-        destroyOnClose
-      >
-        <ConfirmarVentaCard
-          totalConImpuesto={ventaEnProceso.total}
-          tasaImpuesto={tasaImpuesto}
-          onCancel={() => setModalConfirmar(false)}
-          onConfirm={handleConfirmarVenta}
-        />
-      </Modal>
 
       {/* MODAL PANEL DE FORMAS DE PAGO Y DESGLOSE */}
       <Modal

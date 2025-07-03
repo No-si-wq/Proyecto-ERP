@@ -45,7 +45,8 @@ model Product {
   sku           String          @unique
   price         Float
   quantity      Int             @default(0)
-  category      String?
+  categoryId    Int?
+  category      Category?       @relation(fields: [categoryId], references: [id])
   createdAt     DateTime        @default(now())
   invoiceItems  InvoiceItem[]
   purchaseItems PurchaseItem[]
@@ -98,4 +99,11 @@ model PurchaseItem {
 
   @@index([purchaseId])
   @@index([productId])
+}
+
+model Category {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  products  Product[] // Relación con productos
+  createdAt DateTime  @default(now())
 }

@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { Table, Button, Modal, Form, Input, InputNumber, message } from "antd";
+import { Table, Button, Modal, Form, Input, InputNumber, message, Tabs, Space, Tooltip, Select } from "antd";
+import {
+  PlusOutlined, DeleteOutlined, HomeOutlined, EditOutlined, FilePdfOutlined, ReloadOutlined,
+  AppstoreOutlined, SearchOutlined, TeamOutlined, SettingOutlined
+} from "@ant-design/icons";
 import { useNavigate } from 'react-router-dom';
+
+const { TabPane } = Tabs;
 
 const Inventario = () => {
   const navigate = useNavigate();
@@ -19,6 +25,22 @@ const Inventario = () => {
       message.error("Error al cargar el inventario");
     }
     setLoading(false);
+  };
+
+  const [categorias, setCategorias] = useState([]);
+  useEffect(() => {
+    fetchProductos();
+    fetchCategorias();
+  }, []);
+
+  const fetchCategorias = async () => {
+    try {
+      const res = await fetch('/api/categorias');
+      const data = await res.json();
+      setCategorias(data);
+    } catch {
+      message.error('Error al cargar categorías');
+    }
   };
 
   useEffect(() => {
@@ -60,15 +82,51 @@ const Inventario = () => {
     {
       title: "Acciones",
       render: (_, record) => (
-        <Button danger onClick={() => onDelete(record.id)}>
+        <Button danger icon={<DeleteOutlined />} onClick={() => onDelete(record.id)}>
           Eliminar
         </Button>
       ),
     },
   ];
 
+  // Ribbon actions (puedes expandir esto en el futuro)
+  const ribbonActions = (
+    <Tabs defaultActiveKey="1" type="card" style={{ marginBottom: 16 }}>
+      <TabPane tab={<span><AppstoreOutlined />Archivo</span>} key="1">
+        <Space>
+          <Tooltip title="Ir al inicio">
+            <Button icon={<HomeOutlined />} onClick={() => navigate('/home')}>Inicio</Button>
+          </Tooltip>
+          <Tooltip title="Agregar producto">
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalVisible(true)}>
+              Añadir
+            </Button>
+          </Tooltip>
+          <Tooltip title="Actualizar inventario">
+            <Button icon={<ReloadOutlined />} onClick={fetchProductos}>Actualizar</Button>
+          </Tooltip>
+          <Tooltip title="Exportar PDF">
+            <Button icon={<FilePdfOutlined />}>PDF</Button>
+          </Tooltip>
+        </Space>
+      </TabPane>
+      <TabPane tab={<span><TeamOutlined />Catálogos</span>} key="2">
+        <Space>
+          <Button icon={<SearchOutlined />}>Buscar</Button>
+          <Button icon={<EditOutlined />}>Editar</Button>
+        </Space>
+      </TabPane>
+      <TabPane tab={<span><SettingOutlined />Configuración</span>} key="3">
+        <Space>
+          <Button icon={<SettingOutlined />}>Opciones</Button>
+        </Space>
+      </TabPane>
+    </Tabs>
+  );
+
   return (
-    <div style={{
+    <div
+      style={{
         minHeight: '100vh',
         width: '100%',
         background: 'linear-gradient(135deg, #f0f5ff 0%, #fffbe6 100%)',
@@ -76,17 +134,15 @@ const Inventario = () => {
         flexDirection: 'column',
         alignItems: 'center',
         padding: 24,
-      }}>
-      <Button type="default" onClick={() => navigate('/home')} style={{ marginBottom: 16 }}>
-        Ir al inicio
-      </Button>
-      <Button type="primary" onClick={() => setModalVisible(true)} style={{ marginBottom: 16 }}>
-        Añadir Producto
-      </Button>
-      <Table columns={columns} dataSource={productos} loading={loading} rowKey="id" />
+      }}
+    >
+      <div style={{ width: '100%', maxWidth: 1200 }}>
+        {ribbonActions}
+        <Table columns={columns} dataSource={productos} loading={loading} rowKey="id" />
+      </div>
       <Modal
         title="Añadir Producto"
-        visible={modalVisible}
+        open={modalVisible}
         onCancel={() => setModalVisible(false)}
         onOk={() => form.submit()}
       >
@@ -103,8 +159,12 @@ const Inventario = () => {
           <Form.Item name="price" label="Precio" rules={[{ required: true, type: "number", min: 0 }]}>
             <InputNumber style={{ width: "100%" }} step={0.01} />
           </Form.Item>
-          <Form.Item name="category" label="Categoría" rules={[]}>
-            <Input />
+          <Form.Item name="categoryId" label="Categoría" rules={[{ required: true, message: 'Seleccione la categoría' }]}>
+            <Select placeholder="Seleccione una categoría">
+              {categorias.map(c => (
+                <Select.Option key={c.id} value={c.id}>{c.name}</Select.Option>
+              ))}
+            </Select>
           </Form.Item>
         </Form>
       </Modal>

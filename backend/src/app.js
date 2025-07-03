@@ -18,6 +18,7 @@ const pool = new Pool({
 
 // Importa el router de auth y pásale el pool
 const authRouter = require('./routes/auth')(pool);
+const categoriesRoutes = require('./routes/categories');
 app.use('/api/auth', authRouter);
 app.use('/api/clientes', require('./routes/clients'));
 app.use('/api/proveedores', require('./routes/suppliers'));
@@ -25,5 +26,6 @@ app.use('/api/ventas', require('./routes/invoices'));
 app.use('/api/compras', require('./routes/purchase'));
 app.use('/api/inventario', require('./routes/inventory'));
 app.use('/api/reports', require('./routes/reports'));
+app.use('/api/categorias', categoriesRoutes);
 
 module.exports = app;
