@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Layout, Menu, Button, Table, InputNumber, Select, message, Typography, Space } from "antd";
+import { Layout, Menu, Button, Table, InputNumber, Select, message, Typography, Space, Modal } from "antd";
 import { PlusOutlined, DeleteOutlined, ShoppingCartOutlined, DollarOutlined, SaveOutlined, ReloadOutlined, UserAddOutlined } from "@ant-design/icons";
 import { useNavigate } from 'react-router-dom';
 import ConfirmarVentaCard from "../components/ConfirmarVentaCard";
 import RecibidoEfectivoCard from "../components/RecibidoEfectivoCard";
-
-import { Modal } from "antd";
 import ClienteForm from "../components/ClienteForm";
 
 const { Header, Content } = Layout;
@@ -20,7 +18,13 @@ const Ventas = () => {
   const [modalCliente, setModalCliente] = useState(false);
   const [clienteLoading, setClienteLoading] = useState(false);
   const [loading, setLoading] = useState(false);
-  
+
+  // Estados para el flujo de confirmación y recibido
+  const [modalConfirmar, setModalConfirmar] = useState(false);
+  const [modalRecibido, setModalRecibido] = useState(false);
+  const [ventaEnProceso, setVentaEnProceso] = useState({ subtotal: 0, impuesto: 0, total: 0 });
+  const [importeRecibido, setImporteRecibido] = useState(null);
+  const [cambio, setCambio] = useState(null);
 
   // Cargar clientes y productos
   useEffect(() => {
@@ -69,8 +73,8 @@ const Ventas = () => {
   // Calcular total
   const totalVenta = carrito.reduce((acc, item) => acc + item.total, 0);
 
-  // Registrar venta
-  const registrarVenta = async () => {
+  // Registrar venta (adaptada para guardar importe recibido y cambio)
+  const registrarVenta = async ({ importeRecibido, cambio }) => {
     if (!clienteSeleccionado) {
       message.warning("Selecciona un cliente");
       return;
@@ -87,10 +91,14 @@ const Ventas = () => {
         body: JSON.stringify({
           clienteId: clienteSeleccionado,
           productos: carrito.map(({ id, cantidad }) => ({ productoId: id, cantidad })),
+          importeRecibido,
+          cambio,
         }),
       });
-      message.success("Venta registrada");
+      message.success(`Venta registrada. Cambio: $${cambio}`);
       setCarrito([]);
+      setImporteRecibido(null);
+      setCambio(null);
     } catch {
       message.error("No se pudo registrar la venta");
     }
@@ -145,7 +153,15 @@ const Ventas = () => {
       <Menu.Item key="nueva" icon={<PlusOutlined />} onClick={() => setCarrito([])}>
         Nueva venta
       </Menu.Item>
-      <Menu.Item key="guardar" icon={<SaveOutlined />} onClick={registrarVenta} disabled={carrito.length === 0 || loading}>
+      <Menu.Item key="guardar" icon={<SaveOutlined />} onClick={() => {
+        if (carrito.length === 0 || loading) return;
+        // Abre el modal de confirmación de venta
+        const subtotal = totalVenta;
+        const impuesto = +(subtotal * 0.15).toFixed(2);
+        const total = +(subtotal + impuesto).toFixed(2);
+        setVentaEnProceso({ subtotal, impuesto, total });
+        setModalConfirmar(true);
+      }} disabled={carrito.length === 0 || loading}>
         Pagar
       </Menu.Item>
       <Menu.Item key="recargar" icon={<ReloadOutlined />} onClick={() => window.location.reload()}>
@@ -198,6 +214,32 @@ const Ventas = () => {
     </Space>
   );
 
+  // --- MODAL FLUJO DE CONFIRMACIÓN Y EFECTIVO ---
+  // Botón PAGAR: abre el modal de confirmación de venta
+  const handlePagar = () => {
+    const subtotal = totalVenta;
+    const impuesto = +(subtotal * 0.15).toFixed(2);
+    const total = +(subtotal + impuesto).toFixed(2);
+    setVentaEnProceso({ subtotal, impuesto, total });
+    setModalConfirmar(true);
+  };
+
+  // Al confirmar la venta, se abre la tarjeta de efectivo
+  const handleConfirmarVenta = () => {
+    setModalConfirmar(false);
+    setModalRecibido(true);
+  };
+
+  // Al recibir el importe, calcula el cambio, registra la venta y muestra mensaje
+  const handleAceptarImporte = async (importe) => {
+    setImporteRecibido(importe);
+    const cambioCalculado = +(importe - ventaEnProceso.total).toFixed(2);
+    setCambio(cambioCalculado);
+    setModalRecibido(false);
+    await registrarVenta({ importeRecibido: importe, cambio: cambioCalculado });
+    // El mensaje se muestra desde registrarVenta
+  };
+
   return (
     <Layout style={{ minHeight: "100vh" }}>
       <Header style={{ background: "#f4f6fa", padding: "0 16px", boxShadow: "0 1px 4px #eee" }}>
@@ -236,7 +278,7 @@ const Ventas = () => {
             icon={<DollarOutlined />}
             block
             style={{ fontSize: 24, height: 60, marginTop: 8 }}
-            onClick={registrarVenta}
+            onClick={handlePagar}
             disabled={carrito.length === 0 || loading}
           >
             PAGAR
@@ -249,6 +291,37 @@ const Ventas = () => {
         onCancel={() => setModalCliente(false)}
         confirmLoading={clienteLoading}
       />
+
+      {/* MODAL CONFIRMAR VENTA */}
+      <Modal
+        open={modalConfirmar}
+        footer={null}
+        onCancel={() => setModalConfirmar(false)}
+        centered
+        destroyOnClose
+      >
+        <ConfirmarVentaCard
+          subtotal={ventaEnProceso.subtotal}
+          impuesto={0.15}
+          onCancel={() => setModalConfirmar(false)}
+          onConfirm={handleConfirmarVenta}
+        />
+      </Modal>
+
+      {/* MODAL RECIBIDO EFECTIVO */}
+      <Modal
+        open={modalRecibido}
+        footer={null}
+        onCancel={() => setModalRecibido(false)}
+        centered
+        destroyOnClose
+      >
+        <RecibidoEfectivoCard
+          total={ventaEnProceso.total}
+          onCancel={() => setModalRecibido(false)}
+          onAceptar={handleAceptarImporte}
+        />
+      </Modal>
     </Layout>
   );
 };
