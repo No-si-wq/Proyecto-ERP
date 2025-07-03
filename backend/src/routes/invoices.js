@@ -5,10 +5,12 @@ const prisma = new PrismaClient();
 
 // Registrar una venta con múltiples productos
 router.post('/', async (req, res) => {
-  const { clienteId, productos } = req.body;
+  const { clienteId, productos, importeRecibido, cambio, formasPago } = req.body;
   try {
-    // Validar productos y stock
+    // Validar productos y stock, obtener precios actuales
     let total = 0;
+    const productosData = [];
+
     for (const p of productos) {
       const prod = await prisma.product.findUnique({ where: { id: p.productoId } });
       if (!prod) {
@@ -17,21 +19,26 @@ router.post('/', async (req, res) => {
       if (prod.quantity < p.cantidad) {
         return res.status(400).json({ error: `Stock insuficiente para el producto ${prod.name}` });
       }
-      total += p.cantidad * p.price;
+      const subtotal = p.cantidad * prod.price;
+      total += subtotal;
+      productosData.push({
+        productId: p.productoId,
+        quantity: p.cantidad,
+        price: prod.price,
+        subtotal
+      });
     }
 
-    // Crear la factura con todos los items
+    // Crear la factura con todos los items y los campos de pago
     const invoice = await prisma.invoice.create({
       data: {
         clientId: clienteId,
-        total: total,
+        total,
+        importeRecibido: importeRecibido ?? null,
+        cambio: cambio ?? null,
+        formasPago: formasPago ? JSON.stringify(formasPago) : undefined, // si tu modelo tiene un campo JSON
         items: {
-          create: productos.map(p => ({
-            productId: p.productoId,
-            quantity: p.cantidad,
-            price: p.price,
-            subtotal: p.cantidad * p.price,
-          })),
+          create: productosData,
         },
       },
       include: { items: { include: { product: true } }, client: true },
@@ -56,6 +63,9 @@ router.post('/', async (req, res) => {
         subtotal: item.subtotal,
       })),
       total: invoice.total,
+      importeRecibido: invoice.importeRecibido,
+      cambio: invoice.cambio,
+      formasPago: invoice.formasPago ? JSON.parse(invoice.formasPago) : undefined,
     });
   } catch (err) {
     console.error(err);

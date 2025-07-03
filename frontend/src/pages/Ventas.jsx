@@ -1,13 +1,17 @@
 import React, { useEffect, useState } from "react";
-import { Layout, Menu, Button, Table, InputNumber, Select, message, Typography, Space, Modal } from "antd";
-import { PlusOutlined, DeleteOutlined, ShoppingCartOutlined, DollarOutlined, SaveOutlined, ReloadOutlined, UserAddOutlined } from "@ant-design/icons";
+import {
+  Layout, Menu, Button, Table, InputNumber, Select, message, Typography, Space, Modal, Card
+} from "antd";
+import {
+  PlusOutlined, DeleteOutlined, ShoppingCartOutlined, DollarOutlined, SaveOutlined, ReloadOutlined, UserAddOutlined
+} from "@ant-design/icons";
 import { useNavigate } from 'react-router-dom';
 import ConfirmarVentaCard from "../components/ConfirmarVentaCard";
 import RecibidoEfectivoCard from "../components/RecibidoEfectivoCard";
 import ClienteForm from "../components/ClienteForm";
 
 const { Header, Content } = Layout;
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
 const Ventas = () => {
   const navigate = useNavigate();
@@ -21,10 +25,22 @@ const Ventas = () => {
 
   // Estados para el flujo de confirmación y recibido
   const [modalConfirmar, setModalConfirmar] = useState(false);
+  const [modalPanelPago, setModalPanelPago] = useState(false);
   const [modalRecibido, setModalRecibido] = useState(false);
-  const [ventaEnProceso, setVentaEnProceso] = useState({ subtotal: 0, impuesto: 0, total: 0 });
+  const [ventaEnProceso, setVentaEnProceso] = useState({ subtotal: 0, impuestos: 0, total: 0 });
   const [importeRecibido, setImporteRecibido] = useState(null);
   const [cambio, setCambio] = useState(null);
+
+  // Formas de pago (solo efectivo y vales para demo)
+  const formasPago = [
+    { key: "efectivo", tecla: "Ctrl+E", descripcion: "Efectivo" },
+    { key: "vales", tecla: "Ctrl+6", descripcion: "Vales despensa" },
+  ];
+  const columnsFormasPago = [
+    { title: "Tecla", dataIndex: "tecla", key: "tecla", width: 80 },
+    { title: "Descripción", dataIndex: "descripcion", key: "descripcion" },
+  ];
+  const [pagosRecibidos, setPagosRecibidos] = useState([]);
 
   // Cargar clientes y productos
   useEffect(() => {
@@ -73,6 +89,11 @@ const Ventas = () => {
   // Calcular total
   const totalVenta = carrito.reduce((acc, item) => acc + item.total, 0);
 
+  // Cálculo fiscal: precios ya incluyen impuesto
+  const tasaImpuesto = 0.15;
+  const impuestos = +(totalVenta - totalVenta / (1 + tasaImpuesto)).toFixed(2);
+  const subtotal = +(totalVenta - impuestos).toFixed(2);
+
   // Registrar venta (adaptada para guardar importe recibido y cambio)
   const registrarVenta = async ({ importeRecibido, cambio }) => {
     if (!clienteSeleccionado) {
@@ -93,12 +114,14 @@ const Ventas = () => {
           productos: carrito.map(({ id, cantidad }) => ({ productoId: id, cantidad })),
           importeRecibido,
           cambio,
+          formasPago: pagosRecibidos,
         }),
       });
       message.success(`Venta registrada. Cambio: $${cambio}`);
       setCarrito([]);
       setImporteRecibido(null);
       setCambio(null);
+      setPagosRecibidos([]);
     } catch {
       message.error("No se pudo registrar la venta");
     }
@@ -116,7 +139,7 @@ const Ventas = () => {
       });
       const nuevoCliente = await res.json();
       setClientes(prev => [...prev, nuevoCliente]);
-      setClienteSeleccionado(nuevoCliente.id); // selecciona el nuevo cliente
+      setClienteSeleccionado(nuevoCliente.id);
       setModalCliente(false);
       message.success("Cliente agregado");
     } catch {
@@ -155,11 +178,7 @@ const Ventas = () => {
       </Menu.Item>
       <Menu.Item key="guardar" icon={<SaveOutlined />} onClick={() => {
         if (carrito.length === 0 || loading) return;
-        // Abre el modal de confirmación de venta
-        const subtotal = totalVenta;
-        const impuesto = +(subtotal * 0.15).toFixed(2);
-        const total = +(subtotal + impuesto).toFixed(2);
-        setVentaEnProceso({ subtotal, impuesto, total });
+        setVentaEnProceso({ subtotal, impuestos, total: totalVenta });
         setModalConfirmar(true);
       }} disabled={carrito.length === 0 || loading}>
         Pagar
@@ -214,31 +233,92 @@ const Ventas = () => {
     </Space>
   );
 
-  // --- MODAL FLUJO DE CONFIRMACIÓN Y EFECTIVO ---
-  // Botón PAGAR: abre el modal de confirmación de venta
-  const handlePagar = () => {
-    const subtotal = totalVenta;
-    const impuesto = +(subtotal * 0.15).toFixed(2);
-    const total = +(subtotal + impuesto).toFixed(2);
-    setVentaEnProceso({ subtotal, impuesto, total });
-    setModalConfirmar(true);
-  };
-
-  // Al confirmar la venta, se abre la tarjeta de efectivo
+  // Al confirmar la venta, se abre el modal de panel de formas de pago
   const handleConfirmarVenta = () => {
     setModalConfirmar(false);
-    setModalRecibido(true);
+    setModalPanelPago(true);
   };
 
   // Al recibir el importe, calcula el cambio, registra la venta y muestra mensaje
   const handleAceptarImporte = async (importe) => {
     setImporteRecibido(importe);
-    const cambioCalculado = +(importe - ventaEnProceso.total).toFixed(2);
+    const cambioCalculado = +(importe - totalVenta).toFixed(2);
     setCambio(cambioCalculado);
+    setPagosRecibidos([{ metodo: "Efectivo", importe }]);
     setModalRecibido(false);
     await registrarVenta({ importeRecibido: importe, cambio: cambioCalculado });
-    // El mensaje se muestra desde registrarVenta
   };
+
+  // Panel derecho para el modal de pago
+  const panelPagoYDesglose = (
+    <div style={{ minWidth: 340, maxWidth: 350 }}>
+      <Table
+        columns={columnsFormasPago}
+        dataSource={formasPago}
+        pagination={false}
+        size="small"
+        bordered
+        style={{ marginBottom: 8 }}
+        rowKey="key"
+        onRow={record => ({
+          onClick: () => {
+            // Solo efectivo implementado por ahora
+            if (record.key === "efectivo") {
+              setModalPanelPago(false);
+              setTimeout(() => setModalRecibido(true), 250);
+            }
+          }
+        })}
+      />
+      <Card
+        type="inner"
+        title="Resumen de Venta"
+        style={{ marginBottom: 8 }}
+        bodyStyle={{ padding: 16 }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <span>Subtotal</span>
+          <span>${subtotal.toFixed(2)}</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <span>Descto</span>
+          <span>$0.00</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <span>Impuestos</span>
+          <span>${impuestos.toFixed(2)}</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "bold", marginTop: 8 }}>
+          <span>Total</span>
+          <span>${totalVenta.toFixed(2)}</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <span>Recibido</span>
+          <span>${importeRecibido ? importeRecibido.toFixed(2) : "0.00"}</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <span>Cambio</span>
+          <span>${cambio ? cambio.toFixed(2) : "0.00"}</span>
+        </div>
+      </Card>
+      <Card
+        type="inner"
+        title="Formas de Pago Recibidas"
+        style={{ marginBottom: 8 }}
+        bodyStyle={{ padding: 8 }}
+      >
+        {pagosRecibidos.length === 0
+          ? <Text type="secondary">Sin pagos registrados</Text>
+          : pagosRecibidos.map((p, idx) =>
+            <div key={idx} style={{ display: "flex", justifyContent: "space-between" }}>
+              <span>{p.metodo}</span>
+              <span>${p.importe.toFixed(2)}</span>
+            </div>
+          )
+        }
+      </Card>
+    </div>
+  );
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
@@ -246,43 +326,58 @@ const Ventas = () => {
         {ribbon}
       </Header>
       <Content style={{ padding: 16, background: "#eaf0fb" }}>
-        <div style={{ maxWidth: 1200, margin: "auto", background: "#fff", borderRadius: 8, padding: 24, boxShadow: "0 2px 8px #d5deef" }}>
+        <div style={{
+          maxWidth: 1200,
+          margin: "auto",
+          background: "#fff",
+          borderRadius: 8,
+          padding: 24,
+          boxShadow: "0 2px 8px #d5deef"
+        }}>
           <Title level={4} style={{ marginBottom: 16 }}>Punto de Venta</Title>
-          <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
-            <span>Cliente:</span>
-            {selectorCliente}
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 36 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
+                <span>Cliente:</span>
+                {selectorCliente}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
+                <span>Agregar producto:</span>
+                {selectorProductos}
+              </div>
+              <Table
+                columns={columns}
+                dataSource={carrito}
+                rowKey="id"
+                pagination={false}
+                style={{ marginBottom: 16 }}
+                size="small"
+                scroll={{ x: true }}
+                summary={() => (
+                  <Table.Summary.Row>
+                    <Table.Summary.Cell index={0} colSpan={4}><b>Total:</b></Table.Summary.Cell>
+                    <Table.Summary.Cell index={1}><b>${totalVenta.toFixed(2)}</b></Table.Summary.Cell>
+                    <Table.Summary.Cell index={2} />
+                  </Table.Summary.Row>
+                )}
+              />
+              <Button
+                type="primary"
+                size="large"
+                icon={<DollarOutlined />}
+                block
+                style={{ fontSize: 24, height: 60, marginTop: 8 }}
+                onClick={() => {
+                  setVentaEnProceso({ subtotal, impuestos, total: totalVenta });
+                  setModalConfirmar(true);
+                }}
+                disabled={carrito.length === 0 || loading}
+              >
+                PAGAR
+              </Button>
+            </div>
+            {/* YA NO SE MUESTRA EL PANEL DE PAGO AQUÍ, SOLO EN EL MODAL */}
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
-            <span>Agregar producto:</span>
-            {selectorProductos}
-          </div>
-          <Table
-            columns={columns}
-            dataSource={carrito}
-            rowKey="id"
-            pagination={false}
-            style={{ marginBottom: 16 }}
-            size="small"
-            scroll={{ x: true }}
-            summary={() => (
-              <Table.Summary.Row>
-                <Table.Summary.Cell index={0} colSpan={4}><b>Total:</b></Table.Summary.Cell>
-                <Table.Summary.Cell index={1}><b>${totalVenta.toFixed(2)}</b></Table.Summary.Cell>
-                <Table.Summary.Cell index={2} />
-              </Table.Summary.Row>
-            )}
-          />
-          <Button
-            type="primary"
-            size="large"
-            icon={<DollarOutlined />}
-            block
-            style={{ fontSize: 24, height: 60, marginTop: 8 }}
-            onClick={handlePagar}
-            disabled={carrito.length === 0 || loading}
-          >
-            PAGAR
-          </Button>
         </div>
       </Content>
       <ClienteForm
@@ -301,11 +396,23 @@ const Ventas = () => {
         destroyOnClose
       >
         <ConfirmarVentaCard
-          subtotal={ventaEnProceso.subtotal}
-          impuesto={0.15}
+          totalConImpuesto={ventaEnProceso.total}
+          tasaImpuesto={tasaImpuesto}
           onCancel={() => setModalConfirmar(false)}
           onConfirm={handleConfirmarVenta}
         />
+      </Modal>
+
+      {/* MODAL PANEL DE FORMAS DE PAGO Y DESGLOSE */}
+      <Modal
+        open={modalPanelPago}
+        onCancel={() => setModalPanelPago(false)}
+        footer={null}
+        width={400}
+        centered
+        destroyOnClose
+      >
+        {panelPagoYDesglose}
       </Modal>
 
       {/* MODAL RECIBIDO EFECTIVO */}
@@ -317,7 +424,7 @@ const Ventas = () => {
         destroyOnClose
       >
         <RecibidoEfectivoCard
-          total={ventaEnProceso.total}
+          total={totalVenta}
           onCancel={() => setModalRecibido(false)}
           onAceptar={handleAceptarImporte}
         />
