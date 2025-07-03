@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Layout, Menu, Button, Table, InputNumber, Select, message, Modal, Input, Typography, Space } from "antd";
+import { Layout, Menu, Button, Table, InputNumber, Select, message, Typography, Space } from "antd";
 import { PlusOutlined, DeleteOutlined, ShoppingCartOutlined, DollarOutlined, SaveOutlined, ReloadOutlined, UserAddOutlined } from "@ant-design/icons";
 import { useNavigate } from 'react-router-dom';
 import ClienteForm from "../components/ClienteForm";
@@ -14,7 +14,7 @@ const Ventas = () => {
   const [carrito, setCarrito] = useState([]);
   const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
   const [modalCliente, setModalCliente] = useState(false);
-  const [nuevoCliente, setNuevoCliente] = useState("");
+  const [clienteLoading, setClienteLoading] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // Cargar clientes y productos
@@ -92,24 +92,24 @@ const Ventas = () => {
     setLoading(false);
   };
 
-  // Registrar nuevo cliente
-  const registrarCliente = async () => {
-    if (!nuevoCliente.trim()) return;
+  // Handler para crear el cliente desde el ClienteForm reutilizable
+  const handleCreateCliente = async (values) => {
+    setClienteLoading(true);
     try {
       const res = await fetch("/api/clientes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: nuevoCliente }),
+        body: JSON.stringify(values),
       });
-      const cliente = await res.json();
-      setClientes([...clientes, cliente]);
-      setClienteSeleccionado(cliente.id);
+      const nuevoCliente = await res.json();
+      setClientes(prev => [...prev, nuevoCliente]);
+      setClienteSeleccionado(nuevoCliente.id); // selecciona el nuevo cliente
       setModalCliente(false);
-      setNuevoCliente("");
       message.success("Cliente agregado");
     } catch {
       message.error("No se pudo agregar el cliente");
     }
+    setClienteLoading(false);
   };
 
   // Columnas para la tabla del carrito
@@ -172,7 +172,7 @@ const Ventas = () => {
     />
   );
 
-  // Selector de cliente
+  // Selector de cliente y botón para abrir el formulario
   const selectorCliente = (
     <Space>
       <Select
@@ -238,19 +238,12 @@ const Ventas = () => {
           </Button>
         </div>
       </Content>
-      <Modal
-        title="Agregar nuevo cliente"
-        open={modalCliente}
-        onOk={registrarCliente}
+      <ClienteForm
+        visible={modalCliente}
+        onCreate={handleCreateCliente}
         onCancel={() => setModalCliente(false)}
-        okText="Guardar"
-      >
-        <Input
-          placeholder="Nombre del cliente"
-          value={nuevoCliente}
-          onChange={e => setNuevoCliente(e.target.value)}
-        />
-      </Modal>
+        confirmLoading={clienteLoading}
+      />
     </Layout>
   );
 };
