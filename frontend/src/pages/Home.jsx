@@ -32,7 +32,8 @@ const modules = [
     title: "Ventas",
     icon: <DollarOutlined />,
     submenu: [
-      { key: "ventas", title: "Panel de ventas", icon: <FileAddOutlined />, path: "/ventas" },
+      { key: "panel-ventas", title: "Panel de ventas", icon: <FileAddOutlined />, path: "/ventas/panel" },
+      { key: "ventas", title: "Punto de venta", icon: <ShoppingCartOutlined />, path: "/ventas" },
       { key: "clientes", title: "Clientes", icon: <UserOutlined />, path: "/clientes" }
     ]
   },

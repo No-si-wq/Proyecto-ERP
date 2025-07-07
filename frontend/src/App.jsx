@@ -16,6 +16,7 @@ import PrivateRoute from './components/PrivateRoute';
 import { AuthProvider } from './hooks/AuthProvider';
 import Categorias from './pages/Categorias';
 import Usuarios from './pages/Usuarios';
+import PanelVentas from './pages/PanelVentas';
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
           <Route path="/reportes" element={<PrivateRoute><Reportes /></PrivateRoute>} />
           <Route path="/categorias" element={<PrivateRoute><Categorias /></PrivateRoute>} />
           <Route path="/usuarios" element={<PrivateRoute><Usuarios /></PrivateRoute>} />
+          <Route path="/ventas/panel" element={<PrivateRoute><PanelVentas /></PrivateRoute>} />
           <Route 
             path="/home" 
             element={

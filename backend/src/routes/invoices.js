@@ -14,21 +14,18 @@ router.get('/admin', async (req, res) => {
     const invoices = await prisma.invoice.findMany({
       include: {
         client: true,
-        // Puedes incluir más relaciones si lo necesitas
       },
       orderBy: { id: 'desc' },
     });
 
-    // Devuelve solo los campos principales que necesitas para la tabla
+    // Aquí asegúrate de que inv.folio esté correctamente incluido
     const result = invoices.map(inv => ({
       id: inv.id,
-      folio: inv.folio,
+      folio: inv.folio || "-", // Si no existe, pon "-"
       fecha: inv.createdAt,
       cliente: inv.client ? inv.client.name : "Sin cliente",
       total: inv.total,
-      estado: inv.estado || "EMITIDA", // Si tienes campo estado
-      // Otros campos que quieras mostrar, ejemplo:
-      // vendedor: inv.vendedor, referencia: inv.referencia, etc.
+      estado: inv.estado || "EMITIDA",
     }));
 
     res.json(result);
