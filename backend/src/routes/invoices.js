@@ -3,6 +3,57 @@ const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+// Helper para generar folio con ceros a la izquierda
+function generarFolio(id) {
+  return String(id).padStart(5, '0');
+}
+
+// Obtener listado para Admin Ventas (todas las facturas/ventas)
+router.get('/admin', async (req, res) => {
+  try {
+    const invoices = await prisma.invoice.findMany({
+      include: {
+        client: true,
+        // Puedes incluir más relaciones si lo necesitas
+      },
+      orderBy: { id: 'desc' },
+    });
+
+    // Devuelve solo los campos principales que necesitas para la tabla
+    const result = invoices.map(inv => ({
+      id: inv.id,
+      folio: inv.folio,
+      fecha: inv.createdAt,
+      cliente: inv.client ? inv.client.name : "Sin cliente",
+      total: inv.total,
+      estado: inv.estado || "EMITIDA", // Si tienes campo estado
+      // Otros campos que quieras mostrar, ejemplo:
+      // vendedor: inv.vendedor, referencia: inv.referencia, etc.
+    }));
+
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error al obtener el listado de ventas" });
+  }
+});
+
+// Endpoint para obtener el siguiente folio disponible
+router.get('/next-folio', async (req, res) => {
+  try {
+    const lastInvoice = await prisma.invoice.findFirst({
+      orderBy: { id: 'desc' },
+      select: { id: true }
+    });
+    const nextNumber = (lastInvoice?.id ?? 0) + 1;
+    const folio = generarFolio(nextNumber);
+    res.json({ folio });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al obtener el siguiente folio' });
+  }
+});
+
 // Registrar una venta con múltiples productos
 router.post('/', async (req, res) => {
   const { clienteId, productos, importeRecibido, cambio, formasPago } = req.body;
@@ -29,14 +80,23 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // Crear la factura con todos los items y los campos de pago
+    // Obtener el siguiente folio correlativo
+    const lastInvoice = await prisma.invoice.findFirst({
+      orderBy: { id: 'desc' },
+      select: { id: true }
+    });
+    const nextNumber = (lastInvoice?.id ?? 0) + 1;
+    const folio = generarFolio(nextNumber);
+
+    // Crear la factura con todos los items y los campos de pago, incluyendo el folio
     const invoice = await prisma.invoice.create({
       data: {
+        folio,
         clientId: clienteId,
         total,
         importeRecibido: importeRecibido ?? null,
         cambio: cambio ?? null,
-        formasPago: formasPago ? JSON.stringify(formasPago) : undefined, // si tu modelo tiene un campo JSON
+        formasPago: formasPago ? JSON.stringify(formasPago) : undefined,
         items: {
           create: productosData,
         },
@@ -52,9 +112,10 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // Retornar la venta (puedes ajustar el formato según lo que necesites)
+    // Retornar la venta (ajusta según lo que necesites)
     res.status(201).json({
       id: invoice.id,
+      folio: invoice.folio,
       cliente: invoice.client.name,
       items: invoice.items.map(item => ({
         producto: item.product.name,
@@ -88,9 +149,10 @@ router.get('/', async (req, res) => {
       orderBy: { id: 'desc' },
     });
 
-    // Puedes devolver un array de ventas, cada una con su array de productos:
+    // Ahora incluye el folio en la respuesta
     const ventas = invoices.map(inv => ({
       id: inv.id,
+      folio: inv.folio,
       cliente: inv.client.name,
       productos: inv.items.map(item => ({
         producto: item.product.name,

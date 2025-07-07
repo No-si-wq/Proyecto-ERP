@@ -22,6 +22,30 @@ const Ventas = () => {
   const [modalCliente, setModalCliente] = useState(false);
   const [clienteLoading, setClienteLoading] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [folio, setFolio] = useState("");
+
+    // Función para obtener el próximo folio desde backend
+  const fetchFolio = async () => {
+    try {
+      const res = await fetch("/api/ventas/next-folio");
+      const data = await res.json();
+      setFolio(data.folio);
+    } catch {
+      setFolio("ERROR");
+    }
+  };
+
+  // Pedir folio al cargar la página y cuando se reinicia la venta
+  useEffect(() => {
+    fetchFolio();
+  }, []);
+  
+  // Cuando el usuario hace "Nueva venta", también pide un nuevo folio
+  const handleNuevaVenta = () => {
+    setCarrito([]);
+    setPagosRecibidos([]);
+    fetchFolio();
+  };
 
   // Estados para el flujo de confirmación y recibido
   const [modalPanelPago, setModalPanelPago] = useState(false);
@@ -175,7 +199,7 @@ const Ventas = () => {
   // Ribbon de acciones arriba
   const ribbon = (
     <Menu mode="horizontal" style={{ marginBottom: 8 }}>
-      <Menu.Item key="nueva" icon={<PlusOutlined />} onClick={() => setCarrito([])}>
+      <Menu.Item key="nueva" icon={<PlusOutlined />} onClick={handleNuevaVenta}>
         Nueva venta
       </Menu.Item>
       <Menu.Item key="guardar" icon={<SaveOutlined />} onClick={() => {
@@ -336,6 +360,7 @@ const Ventas = () => {
           boxShadow: "0 2px 8px #d5deef"
         }}>
           <Title level={4} style={{ marginBottom: 16 }}>Punto de Venta</Title>
+          <Text type="secondary" style={{ fontSize: 18, fontWeight: "bold" }}>FOLIO: {folio}</Text>
           <div style={{ display: "flex", alignItems: "flex-start", gap: 36 }}>
             <div style={{ flex: 1 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>

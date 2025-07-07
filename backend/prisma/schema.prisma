@@ -54,12 +54,13 @@ model Product {
 
 model Invoice {
   id              Int           @id @default(autoincrement())
+  folio           String        @unique    // <-- Nuevo campo
   client          Client        @relation(fields: [clientId], references: [id])
   clientId        Int
   total           Float
-  importeRecibido Float?        // Nuevo campo: lo recibido del cliente
-  cambio          Float?        // Nuevo campo: el cambio entregado
-  formasPago      Json?         // Nuevo campo: para registrar pagos mixtos o detalles
+  importeRecibido Float?
+  cambio          Float?
+  formasPago      Json?
   createdAt       DateTime      @default(now())
   items           InvoiceItem[]
 }
