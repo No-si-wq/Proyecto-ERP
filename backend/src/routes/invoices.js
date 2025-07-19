@@ -15,7 +15,7 @@ router.get('/admin', async (req, res) => {
       include: {
         client: true,
       },
-      orderBy: { id: 'desc' },
+      orderBy: { id: 'asc' },
     });
 
     // Aquí asegúrate de que inv.folio esté correctamente incluido

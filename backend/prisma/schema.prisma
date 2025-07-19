@@ -7,48 +7,47 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ---- Modelos/Tablas ----
 model User {
-  id          Int      @id @default(autoincrement())
-  email       String   @unique
-  password    String
-  username    String
-  role        String   @default("USER")
-  createdAt   DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  username  String
+  role      String   @default("USER")
+  createdAt DateTime @default(now())
 }
 
 model Client {
-  id        Int      @id @default(autoincrement())
+  id        Int       @id @default(autoincrement())
   name      String
-  rtn       String
-  email     String?  @unique
+  email     String?   @unique
   phone     String?
   address   String?
+  createdAt DateTime  @default(now())
+  rtn       String
   invoices  Invoice[]
-  createdAt DateTime @default(now())
 }
 
 model Supplier {
-  id        Int      @id @default(autoincrement())
+  id        Int        @id @default(autoincrement())
   name      String
-  rtn       String
-  email     String?  @unique
+  email     String?    @unique
   phone     String?
   address   String?
+  createdAt DateTime   @default(now())
+  rtn       String
   purchases Purchase[]
-  createdAt DateTime @default(now())
 }
 
 model Product {
-  id            Int             @id @default(autoincrement())
+  id            Int            @id @default(autoincrement())
   name          String
-  sku           String          @unique
+  sku           String         @unique
   price         Float
-  quantity      Int             @default(0)
+  quantity      Int            @default(0)
+  createdAt     DateTime       @default(now())
   categoryId    Int?
-  category      Category?       @relation(fields: [categoryId], references: [id])
-  createdAt     DateTime        @default(now())
   invoiceItems  InvoiceItem[]
+  category      Category?      @relation(fields: [categoryId], references: [id])
   purchaseItems PurchaseItem[]
 }
 
@@ -65,38 +64,39 @@ model Invoice {
   items           InvoiceItem[]
 }
 
+
 model InvoiceItem {
-  id         Int      @id @default(autoincrement())
-  invoice    Invoice  @relation(fields: [invoiceId], references: [id])
-  invoiceId  Int
-  product    Product  @relation(fields: [productId], references: [id])
-  productId  Int
-  quantity   Int
-  price      Float
-  subtotal   Float
+  id        Int     @id @default(autoincrement())
+  invoiceId Int
+  productId Int
+  quantity  Int
+  price     Float
+  subtotal  Float
+  invoice   Invoice @relation(fields: [invoiceId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
 
   @@index([invoiceId])
   @@index([productId])
 }
 
 model Purchase {
-  id            Int            @id @default(autoincrement())
-  supplier      Supplier       @relation(fields: [supplierId], references: [id])
-  supplierId    Int
-  total         Float
-  createdAt     DateTime       @default(now())
-  items         PurchaseItem[]
+  id         Int            @id @default(autoincrement())
+  total      Float
+  createdAt  DateTime       @default(now())
+  supplierId Int
+  supplier   Supplier       @relation(fields: [supplierId], references: [id])
+  items      PurchaseItem[]
 }
 
 model PurchaseItem {
-  id          Int       @id @default(autoincrement())
-  purchase    Purchase  @relation(fields: [purchaseId], references: [id])
-  purchaseId  Int
-  product     Product   @relation(fields: [productId], references: [id])
-  productId   Int
-  quantity    Int
-  price       Float
-  subtotal    Float
+  id         Int      @id @default(autoincrement())
+  purchaseId Int
+  productId  Int
+  quantity   Int
+  price      Float
+  subtotal   Float
+  product    Product  @relation(fields: [productId], references: [id])
+  purchase   Purchase @relation(fields: [purchaseId], references: [id])
 
   @@index([purchaseId])
   @@index([productId])
@@ -105,6 +105,6 @@ model PurchaseItem {
 model Category {
   id        Int       @id @default(autoincrement())
   name      String    @unique
-  products  Product[] // Relación con productos
   createdAt DateTime  @default(now())
+  products  Product[]
 }

@@ -4,7 +4,8 @@ import {
   ReloadOutlined,
   HomeOutlined,
   FileAddOutlined,
-  UserOutlined
+  UserOutlined,
+  ToolOutlined
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 
@@ -23,10 +24,11 @@ const PanelVentas = () => {
       const data = await res.json();
       setVentas(data);
     } catch (e) {
-      message.error("No se pudieron cargar las ventas");
+      message.error("No se pudieron cargar las ventas", e.message);
     }
     setLoading(false);
   };
+
 
   useEffect(() => {
     fetchVentas();
@@ -64,10 +66,9 @@ const PanelVentas = () => {
       render: (estado) =>
         <Tag color={estado === "EMITIDA" ? "green" : "orange"}>{estado}</Tag>,
     },
-    // Puedes agregar aquí más columnas (como vendedor, referencia, etc.)
   ];
 
-  // Ribbon de acciones arriba (similar al de ventas)
+  // Ribbon de acciones arriba
   const ribbon = (
     <Menu mode="horizontal" style={{ marginBottom: 8 }}>
       <Menu.Item key="recargar" icon={<ReloadOutlined />} onClick={fetchVentas}>
