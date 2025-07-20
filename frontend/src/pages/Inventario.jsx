@@ -140,6 +140,12 @@ const Inventario = () => {
     });
   };
 
+  const TAX_OPTIONS = [
+  { value: 'IVA 15%', label: 'IVA 15%' },
+  { value: 'IVA 0%', label: 'IVA 0%' },
+  { value: 'IVA Exento', label: 'IVA Exento' },
+  ];
+
   // Mostrar nombre de la categoría en la tabla
   const columns = [
     { title: "Nombre", dataIndex: "name", key: "name" },
@@ -151,6 +157,7 @@ const Inventario = () => {
       key: "price",
       render: (value) => `L. ${value.toFixed(2)}`,
     },
+    { title: "Impuesto", dataIndex: "tax", key: "tax" },
     {
       title: "Categoría",
       dataIndex: "category",
@@ -175,6 +182,7 @@ const Inventario = () => {
           quantity: selectedRows[0].quantity,
           price: selectedRows[0].price,
           categoryId: selectedRows[0].category?.id,
+          tax: selectedRows[0].tax,
         });
       }
     },
@@ -349,6 +357,19 @@ const Inventario = () => {
           >
             <InputNumber style={{ width: "100%" }} step={0.01} />
           </Form.Item>
+
+          <Form.Item
+            name="tax"
+            label="Impuesto"
+            rules={[{ required: true, message: "Seleccione el impuesto" }]}
+          >
+            <Select placeholder="Seleccione impuesto">
+              {TAX_OPTIONS.map(opt => (
+                <Select.Option key={opt.value} value={opt.value}>{opt.label}</Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+
           <Form.Item
             name="categoryId"
             label="Categoría"
@@ -402,6 +423,17 @@ const Inventario = () => {
             rules={[{ required: true, type: "number", min: 0 }]}
           >
             <InputNumber style={{ width: "100%" }} step={0.01} />
+          </Form.Item>
+          <Form.Item
+            name="tax"
+            label="Impuesto"
+            rules={[{ required: true, message: "Seleccione el impuesto" }]}
+          >
+            <Select placeholder="Seleccione impuesto">
+              {TAX_OPTIONS.map(opt => (
+                <Select.Option key={opt.value} value={opt.value}>{opt.label}</Select.Option>
+              ))}
+            </Select>
           </Form.Item>
           <Form.Item
             name="categoryId"
