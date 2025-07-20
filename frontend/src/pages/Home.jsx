@@ -42,7 +42,8 @@ const modules = [
     title: "Compras",
     icon: <ShoppingCartOutlined />,
     submenu: [
-      { key: "compras", title: "Panel de compras", icon: <FileAddOutlined />, path: "/compras" },
+      { key: "compras", title: "Panel de compras", icon: <ShoppingCartOutlined />, path: "/compras" },
+      { key: "facturas-compras", title: "Registro de Compras", icon: <FileAddOutlined />, path: "/compras/facturas" },
       { key: "proveedores", title: "Proveedores", icon: <TeamOutlined />, path: "/proveedores" }
     ]
   },

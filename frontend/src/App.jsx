@@ -17,6 +17,7 @@ import { AuthProvider } from './hooks/AuthProvider';
 import Categorias from './pages/Categorias';
 import Usuarios from './pages/Usuarios';
 import PanelVentas from './pages/PanelVentas';
+import FacturasCompras from "./pages/FacturasCompras";
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
           <Route path="/categorias" element={<PrivateRoute><Categorias /></PrivateRoute>} />
           <Route path="/usuarios" element={<PrivateRoute><Usuarios /></PrivateRoute>} />
           <Route path="/ventas/panel" element={<PrivateRoute><PanelVentas /></PrivateRoute>} />
+          <Route path="/compras/facturas" element={<PrivateRoute><FacturasCompras /></PrivateRoute>} />
           <Route 
             path="/home" 
             element={

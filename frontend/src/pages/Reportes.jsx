@@ -14,7 +14,7 @@ export default function Reportes() {
   const [loadingDatos, setLoadingDatos] = useState(false);
 
   const columnsVentas = [
-    { title: "ID", dataIndex: "id", key: "id" },
+    { title: "FOLIO", dataIndex: "folio", key: "folio" },
     { title: "Fecha", dataIndex: "createdAt", key: "createdAt", render: t => t.substring(0,10) },
     { title: "Cliente", dataIndex: ["client", "name"], key: "cliente" },
     { title: "RTN", dataIndex: ["client", "rtn"], key: "rtn" },
@@ -22,7 +22,7 @@ export default function Reportes() {
   ];
 
   const columnsCompras = [
-    { title: "ID", dataIndex: "id", key: "id" },
+    { title: "FOLIO", dataIndex: "folio", key: "folio" },
     { title: "Fecha", dataIndex: "createdAt", key: "createdAt", render: t => t.substring(0,10) },
     { title: "Proveedor", dataIndex: ["supplier", "name"], key: "proveedor" },
     { title: "RTN", dataIndex: ["supplier", "rtn"], key: "rtn" },

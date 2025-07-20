@@ -21,11 +21,28 @@ const Compras = () => {
   const [modalProveedor, setModalProveedor] = useState(false);
   const [proveedorLoading, setProveedorLoading] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [folio, setFolio] = useState("");
 
   // Nuevos estados para el flujo de pago
   const [modalPanelConfirmar, setModalPanelConfirmar] = useState(false);
   const [modalRecibido, setModalRecibido] = useState(false);
   const [pagosRecibidos, setPagosRecibidos] = useState([]);
+
+  // Función para obtener el próximo folio desde backend
+  const fetchFolio = async () => {
+      try {
+        const res = await fetch("/api/compras/next-folio");
+        const data = await res.json();
+        setFolio(data.folio);
+      } catch {
+        setFolio("ERROR");
+      }
+    };
+  
+    // Pedir folio al cargar la página y cuando se reinicia la venta
+    useEffect(() => {
+      fetchFolio();
+    }, []);
 
   // Cargar proveedores y productos
   useEffect(() => {
@@ -76,6 +93,7 @@ const Compras = () => {
     setCarrito([]);
     setProveedorSeleccionado(null);
     setPagosRecibidos([]);
+    fetchFolio();
   };
 
   // Calcular total
@@ -338,6 +356,7 @@ const Compras = () => {
           boxShadow: "0 2px 8px #d5deef"
         }}>
           <Title level={4} style={{ marginBottom: 16 }}>Registro de Compras</Title>
+          <Text type="secondary" style={{ fontSize: 18, fontWeight: "bold" }}>FOLIO: {folio}</Text>
           <div style={{ display: "flex", alignItems: "flex-start", gap: 36 }}>
             <div style={{ flex: 1 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>

@@ -3,6 +3,38 @@ const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+// Helper para generar folio con ceros a la izquierda
+function generarFolioCompra(id) {
+  return String(id).padStart(5, '0');
+}
+
+// Obtener listado para Admin Ventas (todas las facturas/ventas)
+router.get('/admin', async (req, res) => {
+  try {
+    const purchases = await prisma.purchase.findMany({
+      include: {
+        supplier: true,
+      },
+      orderBy: { id: 'asc' },
+    });
+
+    // Aquí asegúrate de que inv.folio esté correctamente incluido
+    const result = purchases.map(pur => ({
+      id: pur.id,
+      folio: pur.folio || "-", // Si no existe, pon "-"
+      fecha: pur.createdAt,
+      proveedor: pur.supplier ? pur.supplier.name : "Sin proveedor",
+      total: pur.total,
+      estado: pur.estado || "EMITIDA",
+    }));
+
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error al obtener el listado de ventas" });
+  }
+});
+
 // Registrar una compra (factura de compra) con múltiples productos
 router.post('/', async (req, res) => {
   const { supplierId, productos } = req.body; // productos: [{ productoId, cantidad, price }]
@@ -14,9 +46,18 @@ router.post('/', async (req, res) => {
     // Calcular el total general
     const total = productos.reduce((acc, item) => acc + item.cantidad * item.price, 0);
 
-    // Crear la compra con varios items
+    // Obtener el siguiente folio correlativo
+    const lastPurchase = await prisma.purchase.findFirst({
+      orderBy: { id: 'desc' },
+      select: { id: true }
+    });
+    const nextNumber = (lastPurchase?.id ?? 0) + 1;
+    const folio = generarFolioCompra(nextNumber);
+
+    // Crear la compra con folio y varios items
     const purchase = await prisma.purchase.create({
       data: {
+        folio,
         supplierId: supplierId,
         total: total,
         items: {
@@ -42,6 +83,7 @@ router.post('/', async (req, res) => {
     // Retornar la compra para el frontend
     res.status(201).json({
       id: purchase.id,
+      folio: purchase.folio,
       proveedor: purchase.supplier.name,
       total: purchase.total,
       productos: purchase.items.map(i => ({
@@ -57,34 +99,19 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Obtener todas las compras
-router.get('/', async (req, res) => {
+// Obtener el siguiente folio disponible para compras
+router.get('/next-folio', async (req, res) => {
   try {
-    const purchases = await prisma.purchase.findMany({
-      include: {
-        supplier: true,
-        items: { include: { product: true } },
-      },
+    const lastPurchase = await prisma.purchase.findFirst({
       orderBy: { id: 'desc' },
+      select: { id: true }
     });
-
-    // Cada compra con todos sus productos
-    const compras = purchases.map(inv => ({
-      id: inv.id,
-      proveedor: inv.supplier.name,
-      total: inv.total,
-      productos: inv.items.map(item => ({
-        producto: item.product.name,
-        price: item.price,
-        cantidad: item.quantity,
-        subtotal: item.subtotal,
-      })),
-    }));
-
-    res.json(compras);
+    const nextNumber = (lastPurchase?.id ?? 0) + 1;
+    const folio = String(nextNumber).padStart(5, '0');
+    res.json({ folio });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Error al obtener las compras' });
+    res.status(500).json({ error: 'Error al obtener el siguiente folio de compra' });
   }
 });
 

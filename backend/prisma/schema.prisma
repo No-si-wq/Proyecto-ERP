@@ -53,17 +53,16 @@ model Product {
 
 model Invoice {
   id              Int           @id @default(autoincrement())
-  folio           String        @unique    // <-- Nuevo campo
-  client          Client        @relation(fields: [clientId], references: [id])
-  clientId        Int
   total           Float
-  importeRecibido Float?
+  createdAt       DateTime      @default(now())
+  clientId        Int
   cambio          Float?
   formasPago      Json?
-  createdAt       DateTime      @default(now())
+  importeRecibido Float?
+  folio           String        @default("")
+  client          Client        @relation(fields: [clientId], references: [id])
   items           InvoiceItem[]
 }
-
 
 model InvoiceItem {
   id        Int     @id @default(autoincrement())
@@ -84,6 +83,7 @@ model Purchase {
   total      Float
   createdAt  DateTime       @default(now())
   supplierId Int
+  folio      String?        @unique
   supplier   Supplier       @relation(fields: [supplierId], references: [id])
   items      PurchaseItem[]
 }
