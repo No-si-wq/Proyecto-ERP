@@ -61,8 +61,8 @@ const PanelVentas = () => {
     },
     {
       title: "Estado",
-      dataIndex: "status",
-      key: "status",
+      dataIndex: "estado",
+      key: "estado",
       render: (estado) =>
         <Tag color={estado === "CANCELADA" ? "red" : "green"}>
           {estado}

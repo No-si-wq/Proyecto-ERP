@@ -63,6 +63,7 @@ model Invoice {
   folio           String        @default("")
   client          Client        @relation(fields: [clientId], references: [id])
   items           InvoiceItem[]
+  estado          String        @default("EMITIDA") @db.VarChar(20)
 }
 
 model InvoiceItem {
@@ -87,6 +88,7 @@ model Purchase {
   folio      String?        @unique
   supplier   Supplier       @relation(fields: [supplierId], references: [id])
   items      PurchaseItem[]
+  estado     String         @default("EMITIDA") @db.VarChar(20)
 }
 
 model PurchaseItem {

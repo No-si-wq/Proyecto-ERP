@@ -52,6 +52,15 @@ const FacturasCompras = () => {
       key: "total",
       render: (total) => `L. ${Number(total).toFixed(2)}`,
     },
+        {
+      title: "Estado",
+      dataIndex: "estado",
+      key: "estado",
+      render: (estado) =>
+        <Tag color={estado === "CANCELADA" ? "red" : "green"}>
+          {estado}
+        </Tag>,
+    },
   ];
 
   const ribbon = (
