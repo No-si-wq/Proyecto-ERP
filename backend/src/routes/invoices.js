@@ -172,7 +172,7 @@ router.patch('/:id/cancel', async (req, res) => {
   try {
     const factura = await prisma.invoice.update({
       where: { id: parseInt(req.params.id) },
-      data: { status: "CANCELADA" }
+      data: { estado: "CANCELADA" }
     });
     res.json(factura);
   } catch (err) {

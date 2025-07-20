@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Table, Typography, Button, Menu, Space, Tag, message } from "antd";
+import { Table, Typography, Button, Menu, Space, Tag, message, Popconfirm } from "antd";
 import {
   ReloadOutlined,
   HomeOutlined,
+  StopOutlined, // Importa el ícono
   FileAddOutlined,
   UserOutlined,
   ToolOutlined
@@ -14,6 +15,7 @@ const { Title } = Typography;
 const PanelVentas = () => {
   const [ventas, setVentas] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]); // Para selección
   const navigate = useNavigate();
 
   const fetchVentas = async () => {
@@ -29,10 +31,24 @@ const PanelVentas = () => {
     setLoading(false);
   };
 
-
   useEffect(() => {
     fetchVentas();
   }, []);
+
+  // Cancelar venta seleccionada
+  const cancelarVenta = async () => {
+    if (selectedRowKeys.length === 0) return;
+    const id = selectedRowKeys[0];
+    try {
+      const res = await fetch(`/api/ventas/${id}/cancel`, { method: "PATCH" });
+      if (!res.ok) throw new Error("Error al cancelar la venta");
+      message.success("Venta cancelada");
+      setSelectedRowKeys([]); // Limpia selección
+      fetchVentas();
+    } catch (e) {
+      message.error("No se pudo cancelar la venta", e.message);
+    }
+  };
 
   const columns = [
     {
@@ -87,6 +103,27 @@ const PanelVentas = () => {
     </Menu>
   );
 
+  // Acción de cancelar arriba de la tabla
+  const actionsBar = (
+    <Space style={{ marginBottom: 16 }}>
+      <Popconfirm
+        title="¿Estás seguro de cancelar esta venta?"
+        onConfirm={cancelarVenta}
+        okText="Sí, cancelar"
+        cancelText="No"
+        disabled={selectedRowKeys.length === 0}
+      >
+        <Button
+          danger
+          icon={<StopOutlined />}
+          disabled={selectedRowKeys.length === 0}
+        >
+          Cancelar
+        </Button>
+      </Popconfirm>
+    </Space>
+  );
+
   return (
     <div
       style={{
@@ -111,6 +148,7 @@ const PanelVentas = () => {
         <Title level={4} style={{ margin: 0 }}>
           Panel de Ventas
         </Title>
+        {actionsBar}
       </Space>
       <Table
         dataSource={ventas}
@@ -120,6 +158,14 @@ const PanelVentas = () => {
         pagination={{ pageSize: 10 }}
         bordered
         scroll={{ x: true }}
+        rowSelection={{
+          type: "radio",
+          selectedRowKeys,
+          onChange: (keys) => setSelectedRowKeys(keys),
+          getCheckboxProps: record => ({
+            disabled: record.estado === "CANCELADA"
+          })
+        }}
       />
     </div>
   );

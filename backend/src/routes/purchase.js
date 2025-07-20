@@ -120,7 +120,7 @@ router.patch('/:id/cancel', async (req, res) => {
   try {
     const compra = await prisma.purchase.update({
       where: { id: parseInt(req.params.id) },
-      data: { status: "CANCELADA" }
+      data: { estado: "CANCELADA" }
     });
     res.json(compra);
   } catch (err) {
