@@ -115,32 +115,17 @@ router.get('/next-folio', async (req, res) => {
   }
 });
 
-// Eliminar compra (ya soporta multiples productos)
-router.delete('/:id', async (req, res) => {
+// Cancelar compra (soft delete)
+router.patch('/:id/cancel', async (req, res) => {
   try {
-    const purchase = await prisma.purchase.findUnique({
+    const compra = await prisma.purchase.update({
       where: { id: parseInt(req.params.id) },
-      include: { items: true }
+      data: { status: "CANCELADA" }
     });
-
-    if (!purchase) {
-      return res.status(404).json({ error: "Compra no encontrada" });
-    }
-
-    // Revertir stock de cada producto
-    for (const item of purchase.items) {
-      await prisma.product.update({
-        where: { id: item.productId },
-        data: { quantity: { decrement: item.quantity } },
-      });
-    }
-
-    await prisma.purchase.delete({ where: { id: purchase.id } });
-
-    res.sendStatus(200);
+    res.json(compra);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Error al eliminar la compra" });
+    res.status(500).json({ error: "No se pudo cancelar la compra" });
   }
 });
 

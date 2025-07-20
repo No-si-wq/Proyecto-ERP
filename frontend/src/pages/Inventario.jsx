@@ -28,6 +28,17 @@ import { useNavigate } from "react-router-dom";
 
 const { TabPane } = Tabs;
 
+const TAX_OPTIONS = [
+  { value: "IVA 15%", label: "IVA 15%", percent: 0.15 },
+  { value: "IVA 0%", label: "IVA 0%", percent: 0.0 },
+  { value: "IVA Exento", label: "IVA Exento", percent: 0.0 },
+];
+
+const getTaxPercent = (taxValue) => {
+  const found = TAX_OPTIONS.find((t) => t.value === taxValue);
+  return found ? found.percent : 0;
+};
+
 const Inventario = () => {
   const navigate = useNavigate();
   const [productos, setProductos] = useState([]);
@@ -39,6 +50,15 @@ const Inventario = () => {
   const [selectedProducto, setSelectedProducto] = useState(null);
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
+
+  // Para controlar el precio sin impuesto y el precio con impuesto en los formularios
+  const [precioBase, setPrecioBase] = useState(0);
+  const [precioConImpuesto, setPrecioConImpuesto] = useState(0);
+  const [taxValue, setTaxValue] = useState(TAX_OPTIONS[0].value);
+
+  const [editPrecioBase, setEditPrecioBase] = useState(0);
+  const [editPrecioConImpuesto, setEditPrecioConImpuesto] = useState(0);
+  const [editTaxValue, setEditTaxValue] = useState(TAX_OPTIONS[0].value);
 
   // Obtener productos y categorías al cargar la página
   useEffect(() => {
@@ -73,11 +93,14 @@ const Inventario = () => {
   // Crear producto
   const onCreate = async (values) => {
     try {
-      // categoryId debe ser número
+      const percent = getTaxPercent(values.tax);
+      const price = Number(values.price_base) + Number(values.price_base) * percent;
       const dataToSend = {
         ...values,
         categoryId: Number(values.categoryId),
+        price: Number(price),
       };
+      delete dataToSend.price_base;
       await fetch("/api/inventario", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -86,6 +109,9 @@ const Inventario = () => {
       message.success("Producto añadido");
       setModalVisible(false);
       form.resetFields();
+      setPrecioBase(0);
+      setPrecioConImpuesto(0);
+      setTaxValue(TAX_OPTIONS[0].value);
       fetchProductos();
     } catch {
       message.error("No se pudo añadir el producto");
@@ -95,10 +121,14 @@ const Inventario = () => {
   // Editar producto
   const onEdit = async (values) => {
     try {
+      const percent = getTaxPercent(values.tax);
+      const price = Number(values.price_base) + Number(values.price_base) * percent;
       const dataToSend = {
         ...values,
         categoryId: Number(values.categoryId),
+        price: Number(price),
       };
+      delete dataToSend.price_base;
       await fetch(`/api/inventario/${selectedProducto.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -109,6 +139,9 @@ const Inventario = () => {
       setSelectedRowKeys([]);
       setSelectedProducto(null);
       editForm.resetFields();
+      setEditPrecioBase(0);
+      setEditPrecioConImpuesto(0);
+      setEditTaxValue(TAX_OPTIONS[0].value);
       fetchProductos();
     } catch {
       message.error("No se pudo editar el producto");
@@ -140,12 +173,6 @@ const Inventario = () => {
     });
   };
 
-  const TAX_OPTIONS = [
-  { value: 'IVA 15%', label: 'IVA 15%' },
-  { value: 'IVA 0%', label: 'IVA 0%' },
-  { value: 'IVA Exento', label: 'IVA Exento' },
-  ];
-
   // Mostrar nombre de la categoría en la tabla
   const columns = [
     { title: "Nombre", dataIndex: "name", key: "name" },
@@ -164,7 +191,6 @@ const Inventario = () => {
       key: "category",
       render: (category) => category?.name || "Sin categoría",
     },
-    // Quitar columna de acciones, ya que ahora los botones están arriba
   ];
 
   // Selección de fila única
@@ -176,13 +202,23 @@ const Inventario = () => {
       setSelectedProducto(selectedRows[0] || null);
       // Si se selecciona, llenamos el formulario de edición
       if (selectedRows[0]) {
+        // Recalcular precio base a partir de price y tax
+        const tax = selectedRows[0].tax || TAX_OPTIONS[0].value;
+        const percent = getTaxPercent(tax);
+        const base = percent > 0
+          ? Number(selectedRows[0].price) / (1 + percent)
+          : Number(selectedRows[0].price);
+        setEditPrecioBase(base);
+        setEditPrecioConImpuesto(Number(selectedRows[0].price));
+        setEditTaxValue(tax);
+
         editForm.setFieldsValue({
           name: selectedRows[0].name,
           sku: selectedRows[0].sku,
           quantity: selectedRows[0].quantity,
-          price: selectedRows[0].price,
+          price_base: base,
+          tax: tax,
           categoryId: selectedRows[0].category?.id,
-          tax: selectedRows[0].tax,
         });
       }
     },
@@ -284,6 +320,42 @@ const Inventario = () => {
     </Tabs>
   );
 
+  // ------ Handlers para el modal de crear producto ------
+  const handleBasePriceChange = (value) => {
+    setPrecioBase(value || 0);
+    const percent = getTaxPercent(taxValue);
+    setPrecioConImpuesto(((value || 0) * (1 + percent)));
+    form.setFieldsValue({
+      price: ((value || 0) * (1 + percent)).toFixed(2),
+    });
+  };
+  const handleTaxChange = (value) => {
+    setTaxValue(value);
+    const percent = getTaxPercent(value);
+    setPrecioConImpuesto(precioBase * (1 + percent));
+    form.setFieldsValue({
+      price: (precioBase * (1 + percent)).toFixed(2),
+    });
+  };
+
+  // ------ Handlers para el modal de editar producto ------
+  const handleEditBasePriceChange = (value) => {
+    setEditPrecioBase(value || 0);
+    const percent = getTaxPercent(editTaxValue);
+    setEditPrecioConImpuesto(((value || 0) * (1 + percent)));
+    editForm.setFieldsValue({
+      price: ((value || 0) * (1 + percent)).toFixed(2),
+    });
+  };
+  const handleEditTaxChange = (value) => {
+    setEditTaxValue(value);
+    const percent = getTaxPercent(value);
+    setEditPrecioConImpuesto(editPrecioBase * (1 + percent));
+    editForm.setFieldsValue({
+      price: (editPrecioBase * (1 + percent)).toFixed(2),
+    });
+  };
+
   return (
     <div
       style={{
@@ -322,7 +394,13 @@ const Inventario = () => {
       <Modal
         title="Añadir Producto"
         open={modalVisible}
-        onCancel={() => setModalVisible(false)}
+        onCancel={() => {
+          setModalVisible(false);
+          setPrecioBase(0);
+          setPrecioConImpuesto(0);
+          setTaxValue(TAX_OPTIONS[0].value);
+          form.resetFields();
+        }}
         onOk={() => form.submit()}
         destroyOnClose
       >
@@ -351,25 +429,44 @@ const Inventario = () => {
             <InputNumber style={{ width: "100%" }} />
           </Form.Item>
           <Form.Item
-            name="price"
-            label="Precio"
+            name="price_base"
+            label="Precio sin impuesto"
             rules={[{ required: true, type: "number", min: 0 }]}
+            initialValue={0}
           >
-            <InputNumber style={{ width: "100%" }} step={0.01} />
+            <InputNumber
+              style={{ width: "100%" }}
+              step={0.01}
+              value={precioBase}
+              onChange={handleBasePriceChange}
+            />
           </Form.Item>
-
           <Form.Item
             name="tax"
             label="Impuesto"
             rules={[{ required: true, message: "Seleccione el impuesto" }]}
+            initialValue={taxValue}
           >
-            <Select placeholder="Seleccione impuesto">
-              {TAX_OPTIONS.map(opt => (
-                <Select.Option key={opt.value} value={opt.value}>{opt.label}</Select.Option>
+            <Select placeholder="Seleccione impuesto" onChange={handleTaxChange}>
+              {TAX_OPTIONS.map((opt) => (
+                <Select.Option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </Select.Option>
               ))}
             </Select>
           </Form.Item>
-
+          <Form.Item label="Precio con impuesto">
+            <InputNumber
+              value={precioConImpuesto}
+              style={{ width: "100%" }}
+              readOnly
+              formatter={(value) => Number(value).toFixed(2)}
+            />
+          </Form.Item>
+          {/* Campo oculto para enviar el precio final */}
+          <Form.Item name="price" hidden>
+            <InputNumber />
+          </Form.Item>
           <Form.Item
             name="categoryId"
             label="Categoría"
@@ -389,7 +486,13 @@ const Inventario = () => {
       <Modal
         title="Editar Producto"
         open={modalEditVisible}
-        onCancel={() => setModalEditVisible(false)}
+        onCancel={() => {
+          setModalEditVisible(false);
+          setEditPrecioBase(0);
+          setEditPrecioConImpuesto(0);
+          setEditTaxValue(TAX_OPTIONS[0].value);
+          editForm.resetFields();
+        }}
         onOk={() => editForm.submit()}
         destroyOnClose
       >
@@ -418,22 +521,43 @@ const Inventario = () => {
             <InputNumber style={{ width: "100%" }} />
           </Form.Item>
           <Form.Item
-            name="price"
-            label="Precio"
+            name="price_base"
+            label="Precio sin impuesto"
             rules={[{ required: true, type: "number", min: 0 }]}
+            initialValue={editPrecioBase}
           >
-            <InputNumber style={{ width: "100%" }} step={0.01} />
+            <InputNumber
+              style={{ width: "100%" }}
+              step={0.01}
+              value={editPrecioBase}
+              onChange={handleEditBasePriceChange}
+            />
           </Form.Item>
           <Form.Item
             name="tax"
             label="Impuesto"
             rules={[{ required: true, message: "Seleccione el impuesto" }]}
+            initialValue={editTaxValue}
           >
-            <Select placeholder="Seleccione impuesto">
-              {TAX_OPTIONS.map(opt => (
-                <Select.Option key={opt.value} value={opt.value}>{opt.label}</Select.Option>
+            <Select placeholder="Seleccione impuesto" onChange={handleEditTaxChange}>
+              {TAX_OPTIONS.map((opt) => (
+                <Select.Option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </Select.Option>
               ))}
             </Select>
+          </Form.Item>
+          <Form.Item label="Precio con impuesto">
+            <InputNumber
+              value={editPrecioConImpuesto}
+              style={{ width: "100%" }}
+              readOnly
+              formatter={(value) => Number(value).toFixed(2)}
+            />
+          </Form.Item>
+          {/* Campo oculto para enviar el precio final */}
+          <Form.Item name="price" hidden>
+            <InputNumber />
           </Form.Item>
           <Form.Item
             name="categoryId"

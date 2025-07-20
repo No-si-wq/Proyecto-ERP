@@ -77,7 +77,7 @@ router.delete('/:id', async (req, res) => {
     await db.query('DELETE FROM "Product" WHERE id=$1', [req.params.id]);
     res.sendStatus(200);
   } catch (err) {
-    res.status(500).send('Error al eliminar producto');
+    res.status(500).send('Error al eliminar producto'); 
   }
 });
 

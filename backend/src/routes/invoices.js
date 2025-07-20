@@ -167,32 +167,17 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Eliminar venta (revertir stock de todos los productos)
-router.delete('/:id', async (req, res) => {
+// Cancelar factura (soft delete)
+router.patch('/:id/cancel', async (req, res) => {
   try {
-    const invoice = await prisma.invoice.findUnique({
+    const factura = await prisma.invoice.update({
       where: { id: parseInt(req.params.id) },
-      include: { items: true }
+      data: { status: "CANCELADA" }
     });
-
-    if (!invoice) {
-      return res.status(404).json({ error: "Venta no encontrada" });
-    }
-
-    // Revertir stock de cada producto del item
-    for (const item of invoice.items) {
-      await prisma.product.update({
-        where: { id: item.productId },
-        data: { quantity: { increment: item.quantity } },
-      });
-    }
-
-    await prisma.invoice.delete({ where: { id: invoice.id } });
-
-    res.sendStatus(200);
+    res.json(factura);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Error al eliminar la venta" });
+    res.status(500).json({ error: "No se pudo cancelar la factura" });
   }
 });
 

@@ -46,6 +46,7 @@ model Product {
   quantity      Int            @default(0)
   createdAt     DateTime       @default(now())
   categoryId    Int?
+  tax           String?        @default("IVA 15%") @db.VarChar(20)
   invoiceItems  InvoiceItem[]
   category      Category?      @relation(fields: [categoryId], references: [id])
   purchaseItems PurchaseItem[]
