@@ -59,4 +59,25 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// Editar producto existente
+router.put('/:id', async (req, res) => {
+  const { name, sku, quantity, price, categoryId } = req.body;
+  if (!name || !sku || typeof quantity !== 'number' || typeof price !== 'number' || !categoryId) {
+    return res.status(400).send('Faltan campos obligatorios');
+  }
+  try {
+    await db.query(
+      'UPDATE "Product" SET name=$1, sku=$2, quantity=$3, price=$4, "categoryId"=$5 WHERE id=$6',
+      [name, sku, quantity, price, categoryId, req.params.id]
+    );
+    res.sendStatus(200);
+  } catch (err) {
+    if (err.code === '23505') { // Unique violation for sku
+      res.status(409).send('El SKU ya existe');
+    } else {
+      res.status(500).send('Error al editar producto');
+    }
+  }
+});
+
 module.exports = router;
