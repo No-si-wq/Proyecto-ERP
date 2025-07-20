@@ -10,7 +10,6 @@ const ProveedorForm = ({
 }) => {
   const [form] = Form.useForm();
 
-  // Cuando el modal se abre, limpia o inicializa los campos
   React.useEffect(() => {
     if (visible) {
       form.resetFields();
@@ -21,17 +20,16 @@ const ProveedorForm = ({
   return (
     <Modal
       open={visible}
-      title="Agregar nuevo proveedor"
+      title="Nuevo Proveedor"
       okText="Agregar"
       cancelText="Cancelar"
-      onCancel={onCancel}
       confirmLoading={confirmLoading}
+      onCancel={onCancel}
       onOk={() => {
         form
           .validateFields()
           .then(values => {
             onCreate(values);
-            // No limpiamos aquí porque el modal se cierra al agregar
           })
           .catch(() => {});
       }}
@@ -41,38 +39,22 @@ const ProveedorForm = ({
       <Form
         form={form}
         layout="vertical"
+        onFinish={onCreate}
         initialValues={initialValues}
       >
-        <Form.Item
-          name="name"
-          label="Nombre del proveedor"
-          rules={[{ required: true, message: "Ingresa el nombre del proveedor" }]}
-        >
+        <Form.Item name="name" label="Nombre" rules={[{ required: true, message: "Nombre requerido" }]}>
           <Input />
         </Form.Item>
-        <Form.Item
-          name="contact"
-          label="Contacto"
-        >
+        <Form.Item name="rtn" label="RTN" rules={[{ required: true, message: "RTN requerido" }]}>
           <Input />
         </Form.Item>
-        <Form.Item
-          name="phone"
-          label="Teléfono"
-        >
+        <Form.Item name="email" label="Correo">
           <Input />
         </Form.Item>
-        <Form.Item
-          name="email"
-          label="Correo electrónico"
-          rules={[{ type: "email", message: "Correo no válido" }]}
-        >
+        <Form.Item name="phone" label="Teléfono" rules={[{ required: true, message: "Teléfono requerido" }]}>
           <Input />
         </Form.Item>
-        <Form.Item
-          name="address"
-          label="Dirección"
-        >
+        <Form.Item name="address" label="Dirección" rules={[{ required: true, message: "Dirección requerida" }]}>
           <Input />
         </Form.Item>
       </Form>

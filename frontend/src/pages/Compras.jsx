@@ -6,7 +6,8 @@ import {
   PlusOutlined, DeleteOutlined, SaveOutlined, ReloadOutlined, UserAddOutlined, ShoppingCartOutlined
 } from "@ant-design/icons";
 import { useNavigate } from 'react-router-dom';
-import ProveedorForm from "../components/ProveedorForm"; 
+import ProveedorForm from "../components/ProveedorForm";
+import RecibidoEfectivoCard from "../components/RecibidoEfectivoCard";
 
 const { Header, Content } = Layout;
 const { Title, Text } = Typography;
@@ -20,6 +21,11 @@ const Compras = () => {
   const [modalProveedor, setModalProveedor] = useState(false);
   const [proveedorLoading, setProveedorLoading] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Nuevos estados para el flujo de pago
+  const [modalPanelConfirmar, setModalPanelConfirmar] = useState(false);
+  const [modalRecibido, setModalRecibido] = useState(false);
+  const [pagosRecibidos, setPagosRecibidos] = useState([]);
 
   // Cargar proveedores y productos
   useEffect(() => {
@@ -69,6 +75,7 @@ const Compras = () => {
   const handleNuevaCompra = () => {
     setCarrito([]);
     setProveedorSeleccionado(null);
+    setPagosRecibidos([]);
   };
 
   // Calcular total
@@ -97,11 +104,13 @@ const Compras = () => {
         body: JSON.stringify({
           supplierId: proveedorSeleccionado,
           productos: carrito.map(({ id, cantidad, price }) => ({ productoId: id, cantidad, price })),
+          pagos: pagosRecibidos, // puedes guardar pagos si tu backend lo soporta
         }),
       });
       message.success("Compra registrada");
       setCarrito([]);
       setProveedorSeleccionado(null);
+      setPagosRecibidos([]);
       setModalPanelConfirmar(false);
     } catch {
       message.error("No se pudo registrar la compra");
@@ -157,7 +166,12 @@ const Compras = () => {
       <Menu.Item key="nueva" icon={<PlusOutlined />} onClick={handleNuevaCompra}>
         Nueva compra
       </Menu.Item>
-      <Menu.Item key="guardar" icon={<SaveOutlined />} onClick={() => setModalPanelConfirmar(true)} disabled={carrito.length === 0 || loading}>
+      <Menu.Item
+        key="guardar"
+        icon={<SaveOutlined />}
+        onClick={() => setModalPanelConfirmar(true)}
+        disabled={carrito.length === 0 || loading}
+      >
         Registrar compra
       </Menu.Item>
       <Menu.Item key="recargar" icon={<ReloadOutlined />} onClick={() => window.location.reload()}>
@@ -210,11 +224,45 @@ const Compras = () => {
     </Space>
   );
 
-  // Panel derecho para el modal de confirmación de compra
-  const [modalPanelConfirmar, setModalPanelConfirmar] = useState(false);
+  // ----------- PAGO EFECTIVO Y CONFIRMACIÓN -----------
 
+  // Al recibir el importe, agrega el pago y muestra el resumen
+  const handleAceptarImporte = (importe) => {
+    setPagosRecibidos([{ metodo: "Efectivo", importe }]);
+    setModalRecibido(false);
+    setTimeout(() => setModalPanelConfirmar(true), 250);
+  };
+
+  // Columnas para la tabla de formas de pago (demo)
+  const formasPago = [
+    { key: "efectivo", tecla: "Ctrl+E", descripcion: "Efectivo" },
+    { key: "vales", tecla: "Ctrl+6", descripcion: "Vales despensa" },
+  ];
+  const columnsFormasPago = [
+    { title: "Tecla", dataIndex: "tecla", key: "tecla", width: 80 },
+    { title: "Descripción", dataIndex: "descripcion", key: "descripcion" },
+  ];
+
+  // Panel derecho para el modal de confirmación de compra
   const panelConfirmar = (
     <div style={{ minWidth: 340, maxWidth: 350 }}>
+      <Table
+        columns={columnsFormasPago}
+        dataSource={formasPago}
+        pagination={false}
+        size="small"
+        bordered
+        style={{ marginBottom: 8 }}
+        rowKey="key"
+        onRow={record => ({
+          onClick: () => {
+            if (record.key === "efectivo") {
+              setModalPanelConfirmar(false);
+              setTimeout(() => setModalRecibido(true), 250);
+            }
+          }
+        })}
+      />
       <Card
         type="inner"
         title="Resumen de Compra"
@@ -237,12 +285,36 @@ const Compras = () => {
           <span>Total</span>
           <span>${totalCompra.toFixed(2)}</span>
         </div>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <span>Recibido</span>
+          <span>${pagosRecibidos.reduce((acc, p) => acc + p.importe, 0).toFixed(2)}</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <span>Cambio</span>
+          <span>${(pagosRecibidos.reduce((acc, p) => acc + p.importe, 0) - totalCompra).toFixed(2)}</span>
+        </div>
+      </Card>
+      <Card
+        type="inner"
+        title="Formas de Pago Recibidas"
+        style={{ marginBottom: 8 }}
+        bodyStyle={{ padding: 8 }}
+      >
+        {pagosRecibidos.length === 0
+          ? <Text type="secondary">Sin pagos registrados</Text>
+          : pagosRecibidos.map((p, idx) =>
+            <div key={idx} style={{ display: "flex", justifyContent: "space-between" }}>
+              <span>{p.metodo}</span>
+              <span>${p.importe.toFixed(2)}</span>
+            </div>
+          )
+        }
       </Card>
       <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16, gap: 8 }}>
-        <Button onClick={() => setModalPanelConfirmar(false)}>Cancelar</Button>
+        <Button onClick={() => { setPagosRecibidos([]); setModalPanelConfirmar(false); }}>Cancelar</Button>
         <Button
           type="primary"
-          disabled={carrito.length === 0 || loading}
+          disabled={pagosRecibidos.length === 0 || loading}
           onClick={registrarCompra}
         >
           Confirmar
@@ -304,7 +376,6 @@ const Compras = () => {
                 REGISTRAR COMPRA
               </Button>
             </div>
-            {/* Panel lateral vacío: podrías poner historial de compras, pero para simplicidad lo dejamos vacío */}
           </div>
         </div>
       </Content>
@@ -314,6 +385,7 @@ const Compras = () => {
         onCancel={() => setModalProveedor(false)}
         confirmLoading={proveedorLoading}
       />
+      {/* MODAL PARA CONFIRMAR COMPRA Y FORMAS DE PAGO */}
       <Modal
         open={modalPanelConfirmar}
         onCancel={() => setModalPanelConfirmar(false)}
@@ -323,6 +395,20 @@ const Compras = () => {
         destroyOnClose
       >
         {panelConfirmar}
+      </Modal>
+      {/* MODAL PARA INGRESAR IMPORTE */}
+      <Modal
+        open={modalRecibido}
+        footer={null}
+        onCancel={() => setModalRecibido(false)}
+        centered
+        destroyOnClose
+      >
+        <RecibidoEfectivoCard
+          total={totalCompra}
+          onCancel={() => setModalRecibido(false)}
+          onAceptar={handleAceptarImporte}
+        />
       </Modal>
     </Layout>
   );
