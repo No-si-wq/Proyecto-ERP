@@ -61,9 +61,9 @@ model Invoice {
   formasPago      Json?
   importeRecibido Float?
   folio           String        @default("")
+  estado          String?       @default("EMITIDA") @db.VarChar(20)
   client          Client        @relation(fields: [clientId], references: [id])
   items           InvoiceItem[]
-  estado          String        @default("EMITIDA") @db.VarChar(20)
 }
 
 model InvoiceItem {
@@ -86,9 +86,9 @@ model Purchase {
   createdAt  DateTime       @default(now())
   supplierId Int
   folio      String?        @unique
+  estado     String?        @default("EMITIDA") @db.VarChar(20)
   supplier   Supplier       @relation(fields: [supplierId], references: [id])
   items      PurchaseItem[]
-  estado     String         @default("EMITIDA") @db.VarChar(20)
 }
 
 model PurchaseItem {
@@ -110,4 +110,12 @@ model Category {
   name      String    @unique
   createdAt DateTime  @default(now())
   products  Product[]
+}
+
+model payment_methods {
+  id          Int    @id @default(autoincrement())
+  clave       String @db.VarChar(10)
+  descripcion String @db.VarChar(50)
+  tipo        String @db.VarChar(30)
+  moneda      String @db.VarChar(30)
 }

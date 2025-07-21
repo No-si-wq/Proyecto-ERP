@@ -88,7 +88,8 @@ router.get('/ventas', async (req, res) => {
         createdAt: {
           gte: new Date(from),
           lte: new Date(to)
-        }
+        },
+        estado: { not: "CANCELADA" }
       },
       include: { client: true },
       orderBy: { createdAt: 'asc' }
@@ -122,7 +123,8 @@ router.get('/compras', async (req, res) => {
         createdAt: {
           gte: new Date(from),
           lte: new Date(to)
-        }
+        },
+        estado: { not: "CANCELADA" }
       },
       include: { supplier: true },
       orderBy: { createdAt: 'asc' }
@@ -152,14 +154,16 @@ router.get('/datos', async (req, res) => {
   try {
     const ventas = await prisma.invoice.findMany({
       where: {
-        createdAt: { gte: new Date(from), lte: new Date(to) }
+        createdAt: { gte: new Date(from), lte: new Date(to) },
+        estado: { not: "CANCELADA" }
       },
       include: { client: true },
       orderBy: { createdAt: 'asc' }
     });
     const compras = await prisma.purchase.findMany({
       where: {
-        createdAt: { gte: new Date(from), lte: new Date(to) }
+        createdAt: { gte: new Date(from), lte: new Date(to) },
+        estado: { not: "CANCELADA" }
       },
       include: { supplier: true },
       orderBy: { createdAt: 'asc' }
