@@ -11,7 +11,7 @@ import {
   FileAddOutlined,
   FileSearchOutlined,
   FolderOpenOutlined,
-  BankOutlined,
+  FileTextOutlined ,
   ShopOutlined,
   CreditCardOutlined,
   DesktopOutlined,
@@ -61,6 +61,7 @@ const modules = [
       { key: "departamentos", title: "Departamentos", icon: <TagsOutlined />, path: "/departamentos" },
       { key: "categorias", title: "Categorías", icon: <FileOutlined />, path: "/categorias" },
       { key: "monedas", title: "Monedas", icon: <GlobalOutlined />, path: "/monedas" },
+      { key: "impuestos", title: "Esquema de Impuestos", icon: <FileTextOutlined  />, path: "/impuestos" },
       // Puedes agregar más catálogos aquí
     ]
   },

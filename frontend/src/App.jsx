@@ -19,6 +19,8 @@ import Usuarios from './pages/Usuarios';
 import PanelVentas from './pages/PanelVentas';
 import FacturasCompras from "./pages/FacturasCompras";
 import PaymentMethods from './pages/PaymentMethods';
+import CurrencyPage from './pages/CurrencyPage';
+import TaxesPage from './pages/TaxesPage';
 
 function App() {
   return (
@@ -38,6 +40,8 @@ function App() {
           <Route path="/ventas/panel" element={<PrivateRoute><PanelVentas /></PrivateRoute>} />
           <Route path="/compras/facturas" element={<PrivateRoute><FacturasCompras /></PrivateRoute>} />
           <Route path='/formas-pago' element={<PrivateRoute><PaymentMethods /></PrivateRoute>} />
+          <Route path='/monedas' element={<PrivateRoute><CurrencyPage/></PrivateRoute>} />
+          <Route path='/impuestos' element={<PrivateRoute><TaxesPage/></PrivateRoute>} />
           <Route 
             path="/home" 
             element={

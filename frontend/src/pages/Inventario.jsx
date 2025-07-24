@@ -28,16 +28,6 @@ import { useNavigate } from "react-router-dom";
 
 const { TabPane } = Tabs;
 
-const TAX_OPTIONS = [
-  { value: "IVA 15%", label: "IVA 15%", percent: 0.15 },
-  { value: "IVA 0%", label: "IVA 0%", percent: 0.0 },
-  { value: "IVA Exento", label: "IVA Exento", percent: 0.0 },
-];
-
-const getTaxPercent = (taxValue) => {
-  const found = TAX_OPTIONS.find((t) => t.value === taxValue);
-  return found ? found.percent : 0;
-};
 
 const Inventario = () => {
   const navigate = useNavigate();
@@ -54,17 +44,49 @@ const Inventario = () => {
   // Para controlar el precio sin impuesto y el precio con impuesto en los formularios
   const [precioBase, setPrecioBase] = useState(0);
   const [precioConImpuesto, setPrecioConImpuesto] = useState(0);
-  const [taxValue, setTaxValue] = useState(TAX_OPTIONS[0].value);
+  const [taxOptions, setTaxOptions] = useState([]);
 
   const [editPrecioBase, setEditPrecioBase] = useState(0);
   const [editPrecioConImpuesto, setEditPrecioConImpuesto] = useState(0);
-  const [editTaxValue, setEditTaxValue] = useState(TAX_OPTIONS[0].value);
+  const [selectedTax, setSelectedTax] = useState(null);
+  const [editSelectedTax, setEditSelectedTax] = useState(null);
 
   // Obtener productos y categorías al cargar la página
   useEffect(() => {
     fetchProductos();
     fetchCategorias();
+    fetchTaxes();
   }, []);
+
+const fetchTaxes = async () => {
+  try {
+    const res = await fetch("/api/taxes");
+    const { data } = await res.json();
+
+    const formattedTaxes = data.map((tax) => ({
+      value: tax.id, // Este es el que se usará para guardar y comparar
+      label: `${tax.clave} (${(tax.percent * 100).toFixed(2)}%)`, // Se mostrará esto
+      percent: tax.percent,
+      raw: tax, // opcional si quieres acceder a toda la info
+    }));
+
+    setTaxOptions(formattedTaxes);
+
+    if (formattedTaxes.length > 0) {
+      setSelectedTax(formattedTaxes[0].value);
+      setEditSelectedTax(formattedTaxes[0].value);
+    }
+  } catch (err) {
+    message.error("Error al cargar impuestos");
+    console.error(err);
+  }
+};
+
+  const getTaxPercent = (taxValue) => {
+    const found = taxOptions.find((t) => t.value === taxValue);
+    return found ? found.percent : 0;
+  };
+
 
   // Trae los productos
   const fetchProductos = async () => {
@@ -91,62 +113,75 @@ const Inventario = () => {
   };
 
   // Crear producto
-  const onCreate = async (values) => {
-    try {
-      const percent = getTaxPercent(values.tax);
-      const price = Number(values.price_base) + Number(values.price_base) * percent;
-      const dataToSend = {
-        ...values,
-        categoryId: Number(values.categoryId),
-        price: Number(price),
-      };
-      delete dataToSend.price_base;
-      await fetch("/api/inventario", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dataToSend),
-      });
-      message.success("Producto añadido");
-      setModalVisible(false);
-      form.resetFields();
-      setPrecioBase(0);
-      setPrecioConImpuesto(0);
-      setTaxValue(TAX_OPTIONS[0].value);
-      fetchProductos();
-    } catch {
-      message.error("No se pudo añadir el producto");
-    }
-  };
+const onCreate = async (values) => {
+  try {
+    const percent = getTaxPercent(selectedTax);
+    const base = parseFloat(values.price_base).toFixed(2);
+    const price = parseFloat(base * (1 + percent)).toFixed(2);
+
+
+    const dataToSend = {
+      ...values,
+      tax: selectedTax,
+      categoryId: Number(values.categoryId),
+      price: Number(price),
+    };
+    delete dataToSend.price_base;
+
+    await fetch("/api/inventario", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(dataToSend),
+    });
+    
+    message.success("Producto añadido");
+    setModalVisible(false);
+    form.resetFields();
+    setPrecioBase(0);
+    setPrecioConImpuesto(0);
+    setSelectedTax(taxOptions[0]?.value || null);
+    fetchProductos();
+  } catch {
+    message.error("No se pudo añadir el producto");
+  }
+};
+
 
   // Editar producto
-  const onEdit = async (values) => {
-    try {
-      const percent = getTaxPercent(values.tax);
-      const price = Number(values.price_base) + Number(values.price_base) * percent;
-      const dataToSend = {
-        ...values,
-        categoryId: Number(values.categoryId),
-        price: Number(price),
-      };
-      delete dataToSend.price_base;
-      await fetch(`/api/inventario/${selectedProducto.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dataToSend),
-      });
-      message.success("Producto editado");
-      setModalEditVisible(false);
-      setSelectedRowKeys([]);
-      setSelectedProducto(null);
-      editForm.resetFields();
-      setEditPrecioBase(0);
-      setEditPrecioConImpuesto(0);
-      setEditTaxValue(TAX_OPTIONS[0].value);
-      fetchProductos();
-    } catch {
-      message.error("No se pudo editar el producto");
-    }
-  };
+const onEdit = async (values) => {
+  try {
+    const percent = getTaxPercent(editSelectedTax);
+    const base = parseFloat(values.price_base).toFixed(2);
+    const price = parseFloat(base * (1 + percent)).toFixed(2);
+
+
+    const dataToSend = {
+      ...values,
+      tax: editSelectedTax,
+      categoryId: Number(values.categoryId),
+      price: Number(price),
+    };
+    delete dataToSend.price_base;
+
+    await fetch(`/api/inventario/${selectedProducto.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(dataToSend),
+    });
+
+    message.success("Producto editado");
+    setModalEditVisible(false);
+    setSelectedRowKeys([]);
+    setSelectedProducto(null);
+    editForm.resetFields();
+    setEditPrecioBase(0);
+    setEditPrecioConImpuesto(0);
+    setEditSelectedTax(taxOptions[0]?.value || null);
+    fetchProductos();
+  } catch {
+    message.error("No se pudo editar el producto");
+  }
+};
 
   // Eliminar producto
   const onDelete = async () => {
@@ -184,7 +219,16 @@ const Inventario = () => {
       key: "price",
       render: (value) => `L. ${value.toFixed(2)}`,
     },
-    { title: "Impuesto", dataIndex: "tax", key: "tax" },
+    {
+      title: 'Impuesto',
+      dataIndex: 'tax',
+      key: 'tax',
+      render: (tax) => {
+        if (!tax || !tax.clave) return 'Sin impuesto';
+        const percent = typeof tax.percent === 'number' ? (tax.percent * 100).toFixed(2) : '';
+        return `${tax.clave} ${percent ? `(${percent}%)` : ''}`;
+      }
+    },
     {
       title: "Categoría",
       dataIndex: "category",
@@ -194,35 +238,56 @@ const Inventario = () => {
   ];
 
   // Selección de fila única
-  const rowSelection = {
-    type: "radio",
-    selectedRowKeys,
-    onChange: (selectedKeys, selectedRows) => {
-      setSelectedRowKeys(selectedKeys);
-      setSelectedProducto(selectedRows[0] || null);
-      // Si se selecciona, llenamos el formulario de edición
-      if (selectedRows[0]) {
-        // Recalcular precio base a partir de price y tax
-        const tax = selectedRows[0].tax || TAX_OPTIONS[0].value;
-        const percent = getTaxPercent(tax);
-        const base = percent > 0
-          ? Number(selectedRows[0].price) / (1 + percent)
-          : Number(selectedRows[0].price);
-        setEditPrecioBase(base);
-        setEditPrecioConImpuesto(Number(selectedRows[0].price));
-        setEditTaxValue(tax);
+const rowSelection = {
+  type: 'checkbox',
+  selectedRowKeys,
+  onChange: (newSelectedKeys, selectedRows) => {
+    // Caso: se vuelve a seleccionar la misma fila (des-seleccionar)
+    if (
+      selectedRowKeys.length === 1 &&
+      newSelectedKeys.length === 1 &&
+      newSelectedKeys[0] === selectedRowKeys[0]
+    ) {
+      setSelectedRowKeys([]);
+      setSelectedProducto(null);
+      setEditPrecioBase(0);
+      setEditPrecioConImpuesto(0);
+      setEditSelectedTax(null);
+      editForm.resetFields();
+      return;
+    }
 
-        editForm.setFieldsValue({
-          name: selectedRows[0].name,
-          sku: selectedRows[0].sku,
-          quantity: selectedRows[0].quantity,
-          price_base: base,
-          tax: tax,
-          categoryId: selectedRows[0].category?.id,
-        });
-      }
-    },
-  };
+    // Caso: nueva selección
+    const selectedRow = selectedRows[0];
+    const newKey = newSelectedKeys[0] ? [newSelectedKeys[0]] : [];
+    setSelectedRowKeys(newKey);
+    setSelectedProducto(selectedRow || null);
+
+    if (selectedRow) {
+      const tax = selectedRow?.tax?.clave;
+      const percent = parseFloat(selectedRow?.tax?.descripcion) || 0;
+
+      const baseRaw = percent > 0
+        ? Number(selectedRow.price) / (1 + percent)
+        : Number(selectedRow.price);
+      const base = Number(baseRaw.toFixed(2));
+
+      setEditPrecioBase(base);
+      setEditPrecioConImpuesto(Number(selectedRow.price));
+      setEditSelectedTax(tax);
+
+      editForm.setFieldsValue({
+        name: selectedRow.name,
+        sku: selectedRow.sku,
+        quantity: selectedRow.quantity,
+        price_base: base,
+        taxId: selectedRow.tax?.id,
+        categoryId: selectedRow.category?.id,
+      });
+    }
+  },
+};
+
 
   // Ribbon de acciones
   const ribbonActions = (
@@ -321,16 +386,18 @@ const Inventario = () => {
   );
 
   // ------ Handlers para el modal de crear producto ------
+  // En el modal de crear:
   const handleBasePriceChange = (value) => {
     setPrecioBase(value || 0);
-    const percent = getTaxPercent(taxValue);
+    const percent = getTaxPercent(selectedTax);
     setPrecioConImpuesto(((value || 0) * (1 + percent)));
     form.setFieldsValue({
       price: ((value || 0) * (1 + percent)).toFixed(2),
     });
   };
+
   const handleTaxChange = (value) => {
-    setTaxValue(value);
+    setSelectedTax(value);
     const percent = getTaxPercent(value);
     setPrecioConImpuesto(precioBase * (1 + percent));
     form.setFieldsValue({
@@ -338,17 +405,18 @@ const Inventario = () => {
     });
   };
 
-  // ------ Handlers para el modal de editar producto ------
+  // En el modal de editar:
   const handleEditBasePriceChange = (value) => {
     setEditPrecioBase(value || 0);
-    const percent = getTaxPercent(editTaxValue);
+    const percent = getTaxPercent(editSelectedTax);
     setEditPrecioConImpuesto(((value || 0) * (1 + percent)));
     editForm.setFieldsValue({
       price: ((value || 0) * (1 + percent)).toFixed(2),
     });
   };
+
   const handleEditTaxChange = (value) => {
-    setEditTaxValue(value);
+    setEditSelectedTax(value);
     const percent = getTaxPercent(value);
     setEditPrecioConImpuesto(editPrecioBase * (1 + percent));
     editForm.setFieldsValue({
@@ -398,7 +466,6 @@ const Inventario = () => {
           setModalVisible(false);
           setPrecioBase(0);
           setPrecioConImpuesto(0);
-          setTaxValue(TAX_OPTIONS[0].value);
           form.resetFields();
         }}
         onOk={() => form.submit()}
@@ -442,19 +509,23 @@ const Inventario = () => {
             />
           </Form.Item>
           <Form.Item
-            name="tax"
+            name="taxId"
             label="Impuesto"
             rules={[{ required: true, message: "Seleccione el impuesto" }]}
-            initialValue={taxValue}
           >
-            <Select placeholder="Seleccione impuesto" onChange={handleTaxChange}>
-              {TAX_OPTIONS.map((opt) => (
+            <Select
+              placeholder="Seleccione impuesto"
+              onChange={handleTaxChange}
+              value={selectedTax}
+            >
+              {taxOptions.map((opt) => (
                 <Select.Option key={opt.value} value={opt.value}>
                   {opt.label}
                 </Select.Option>
               ))}
             </Select>
           </Form.Item>
+
           <Form.Item label="Precio con impuesto">
             <InputNumber
               value={precioConImpuesto}
@@ -490,7 +561,6 @@ const Inventario = () => {
           setModalEditVisible(false);
           setEditPrecioBase(0);
           setEditPrecioConImpuesto(0);
-          setEditTaxValue(TAX_OPTIONS[0].value);
           editForm.resetFields();
         }}
         onOk={() => editForm.submit()}
@@ -534,13 +604,16 @@ const Inventario = () => {
             />
           </Form.Item>
           <Form.Item
-            name="tax"
+            name="taxId"
             label="Impuesto"
             rules={[{ required: true, message: "Seleccione el impuesto" }]}
-            initialValue={editTaxValue}
           >
-            <Select placeholder="Seleccione impuesto" onChange={handleEditTaxChange}>
-              {TAX_OPTIONS.map((opt) => (
+            <Select
+              placeholder="Seleccione impuesto"
+              onChange={handleEditTaxChange}
+              value={editSelectedTax}
+            >
+              {taxOptions.map((opt) => (
                 <Select.Option key={opt.value} value={opt.value}>
                   {opt.label}
                 </Select.Option>

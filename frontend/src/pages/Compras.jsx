@@ -22,6 +22,8 @@ const Compras = () => {
   const [proveedorLoading, setProveedorLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [folio, setFolio] = useState("");
+  const [metodosPago, setMetodosPago] = useState([]);
+
 
   // Nuevos estados para el flujo de pago
   const [modalPanelConfirmar, setModalPanelConfirmar] = useState(false);
@@ -38,11 +40,6 @@ const Compras = () => {
         setFolio("ERROR");
       }
     };
-  
-    // Pedir folio al cargar la página y cuando se reinicia la venta
-    useEffect(() => {
-      fetchFolio();
-    }, []);
 
   // Cargar proveedores y productos
   useEffect(() => {
@@ -62,6 +59,17 @@ const Compras = () => {
         message.error("No se pudieron cargar los productos");
       }
     };
+    const fetchMetodosPago = async () => {
+      try {
+        const res = await fetch("/api/payment-methods");
+        const { data } = await res.json();
+        setMetodosPago(data);
+      } catch {
+        message.error("No se pudieron cargar los métodos de pago");
+      }
+    };
+    fetchMetodosPago();
+    fetchFolio();
     fetchProveedores();
     fetchProductos();
   }, []);
@@ -99,10 +107,19 @@ const Compras = () => {
   // Calcular total
   const totalCompra = carrito.reduce((acc, item) => acc + item.total, 0);
 
-  // Cálculo fiscal: precios incluyen impuesto
-  const tasaImpuesto = 0.15;
-  const impuestos = +(totalCompra - totalCompra / (1 + tasaImpuesto)).toFixed(2);
-  const subtotal = +(totalCompra - impuestos).toFixed(2);
+  // Cálculo más preciso considerando el impuesto por producto
+  const impuestos = carrito.reduce((acc, item) => {
+    const taxRate = item.tax?.percent ?? 0; // Si no tiene impuesto, se asume 0%
+    const priceSinImpuesto = item.price / (1 + taxRate);
+    const impuestoItem = (item.price - priceSinImpuesto) * item.cantidad;
+    return acc + impuestoItem;
+  }, 0);
+
+  const subtotal = carrito.reduce((acc, item) => {
+    const taxRate = item.tax?.percent ?? 0;
+    const priceSinImpuesto = item.price / (1 + taxRate);
+    return acc + priceSinImpuesto * item.cantidad;
+  }, 0);
 
   // Registrar compra
   const registrarCompra = async () => {
@@ -252,12 +269,12 @@ const Compras = () => {
   };
 
   // Columnas para la tabla de formas de pago (demo)
-  const formasPago = [
-    { key: "efectivo", tecla: "Ctrl+E", descripcion: "Efectivo" },
-    { key: "vales", tecla: "Ctrl+6", descripcion: "Vales despensa" },
-  ];
+  const formasPago = metodosPago.map(mp => ({
+    key: mp.id,
+    descripcion: `${mp.clave} - ${mp.descripcion}`,
+  }));
+
   const columnsFormasPago = [
-    { title: "Tecla", dataIndex: "tecla", key: "tecla", width: 80 },
     { title: "Descripción", dataIndex: "descripcion", key: "descripcion" },
   ];
 
@@ -274,10 +291,9 @@ const Compras = () => {
         rowKey="key"
         onRow={record => ({
           onClick: () => {
-            if (record.key === "efectivo") {
-              setModalPanelConfirmar(false);
-              setTimeout(() => setModalRecibido(true), 250);
-            }
+            setPagosRecibidos([{ metodo: record.descripcion, importe: totalCompra }]); // o mostrar modal para capturar importe
+            setModalPanelConfirmar(false);
+            setTimeout(() => setModalRecibido(true), 250);
           }
         })}
       />
@@ -289,27 +305,27 @@ const Compras = () => {
       >
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <span>Subtotal</span>
-          <span>${subtotal.toFixed(2)}</span>
+          <span>L. {subtotal.toFixed(2)}</span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <span>Descto</span>
-          <span>$0.00</span>
+          <span>L. 0.00</span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <span>Impuestos</span>
-          <span>${impuestos.toFixed(2)}</span>
+          <span>L. {impuestos.toFixed(2)}</span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "bold", marginTop: 8 }}>
           <span>Total</span>
-          <span>${totalCompra.toFixed(2)}</span>
+          <span>L. {totalCompra.toFixed(2)}</span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <span>Recibido</span>
-          <span>${pagosRecibidos.reduce((acc, p) => acc + p.importe, 0).toFixed(2)}</span>
+          <span>L. {pagosRecibidos.reduce((acc, p) => acc + p.importe, 0).toFixed(2)}</span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <span>Cambio</span>
-          <span>${(pagosRecibidos.reduce((acc, p) => acc + p.importe, 0) - totalCompra).toFixed(2)}</span>
+          <span>L. {(pagosRecibidos.reduce((acc, p) => acc + p.importe, 0) - totalCompra).toFixed(2)}</span>
         </div>
       </Card>
       <Card
@@ -323,7 +339,7 @@ const Compras = () => {
           : pagosRecibidos.map((p, idx) =>
             <div key={idx} style={{ display: "flex", justifyContent: "space-between" }}>
               <span>{p.metodo}</span>
-              <span>${p.importe.toFixed(2)}</span>
+              <span>L. {p.importe.toFixed(2)}</span>
             </div>
           )
         }
@@ -378,7 +394,7 @@ const Compras = () => {
                 summary={() => (
                   <Table.Summary.Row>
                     <Table.Summary.Cell index={0} colSpan={4}><b>Total:</b></Table.Summary.Cell>
-                    <Table.Summary.Cell index={1}><b>${totalCompra.toFixed(2)}</b></Table.Summary.Cell>
+                    <Table.Summary.Cell index={1}><b>L. {totalCompra.toFixed(2)}</b></Table.Summary.Cell>
                     <Table.Summary.Cell index={2} />
                   </Table.Summary.Row>
                 )}

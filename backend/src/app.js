@@ -28,6 +28,8 @@ app.use('/api/compras', require('./routes/purchase'));
 app.use('/api/inventario', require('./routes/inventory'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/usuarios', require('./routes/users'));
+app.use('/api/currencies', require('./routes/currencies'));
+app.use('/api/taxes', require('./routes/taxes'));
 app.use('/api/payment-methods', paymentMethodsRouter);
 app.use('/api/categorias', categoriesRoutes);
 

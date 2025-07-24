@@ -46,9 +46,10 @@ model Product {
   quantity      Int            @default(0)
   createdAt     DateTime       @default(now())
   categoryId    Int?
-  tax           String?        @default("IVA 15%") @db.VarChar(20)
+  taxId         Int
   invoiceItems  InvoiceItem[]
   category      Category?      @relation(fields: [categoryId], references: [id])
+  tax           Tax            @relation(fields: [taxId], references: [id])
   purchaseItems PurchaseItem[]
 }
 
@@ -118,4 +119,33 @@ model payment_methods {
   descripcion String @db.VarChar(50)
   tipo        String @db.VarChar(30)
   moneda      String @db.VarChar(30)
+}
+
+model Currency {
+  id          Int      @id @default(autoincrement())
+  clave       String   @db.VarChar(10)
+  descripcion String   @db.VarChar(50)
+  abreviatura String   @db.VarChar(10)
+  tipoCambio  Float
+  fecha       DateTime @updatedAt
+}
+
+model Tax {
+  id          Int       @id @default(autoincrement())
+  clave       String    @unique
+  descripcion String
+  percent     Float
+  products    Product[]
+}
+
+model prisma_migrations {
+  id                  Int       @id @default(dbgenerated("nextval('_prisma_migrations_id_seq'::regclass)"))
+  migration_name      String
+  checksum            String
+  finished_at         DateTime?
+  applied_steps_count Int       @default(0)
+  rolled_back_at      DateTime?
+  applied_at          DateTime  @default(now())
+
+  @@map("_prisma_migrations")
 }

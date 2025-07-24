@@ -1,4 +1,5 @@
 const express = require('express');
+const bcrypt = require('bcrypt');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
@@ -27,15 +28,19 @@ router.post('/', async (req, res) => {
   if (!email || !username || !password || !role) {
     return res.status(400).json({ error: 'Faltan campos obligatorios' });
   }
+
   try {
+    const hashedPassword = await bcrypt.hash(password, 10); // 🔐
+
     const user = await prisma.user.create({
       data: {
         email,
         username,
-        password, // En producción, asegurate de hashear la contraseña
+        password: hashedPassword, // 🔐 Guardar contraseña hasheada
         role,
       }
     });
+
     res.status(201).json({
       id: user.id,
       username: user.username,
@@ -44,10 +49,53 @@ router.post('/', async (req, res) => {
       createdAt: user.createdAt,
     });
   } catch (err) {
-    if (err.code === 'P2002') { // Unique constraint failed
+    if (err.code === 'P2002') {
       res.status(409).json({ error: 'El email o usuario ya existe' });
     } else {
       res.status(500).json({ error: 'Error al crear usuario' });
+    }
+  }
+});
+
+router.put('/:id', async (req, res) => {
+  const { email, username, password, role } = req.body;
+  const userId = Number(req.params.id);
+
+  if (!email && !username && !password && !role) {
+    return res.status(400).json({ error: 'Debes proporcionar al menos un campo para actualizar' });
+  }
+
+  try {
+    const dataToUpdate = {
+      ...(email && { email }),
+      ...(username && { username }),
+      ...(role && { role }),
+    };
+
+    if (password) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      dataToUpdate.password = hashedPassword;
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: dataToUpdate
+    });
+
+    res.json({
+      id: updatedUser.id,
+      username: updatedUser.username,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      createdAt: updatedUser.createdAt,
+    });
+  } catch (err) {
+    if (err.code === 'P2025') {
+      res.status(404).json({ error: 'Usuario no encontrado' });
+    } else if (err.code === 'P2002') {
+      res.status(409).json({ error: 'El email o usuario ya existe' });
+    } else {
+      res.status(500).json({ error: 'Error al actualizar usuario' });
     }
   }
 });

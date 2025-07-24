@@ -159,9 +159,19 @@ const PanelVentas = () => {
         bordered
         scroll={{ x: true }}
         rowSelection={{
-          type: "radio",
+          type: 'checkbox',
           selectedRowKeys,
-          onChange: (keys) => setSelectedRowKeys(keys),
+          onChange: (keys, selectedRows) => {
+            const selectedKey = keys[0];
+
+            if (selectedRowKeys[0] === selectedKey) {
+              // Deselecciona si se vuelve a hacer clic sobre la misma fila
+              setSelectedRowKeys([]);
+            } else {
+              // Solo una fila seleccionada a la vez
+              setSelectedRowKeys(selectedKey ? [selectedKey] : []);
+            }
+          },
           getCheckboxProps: record => ({
             disabled: record.estado === "CANCELADA"
           })

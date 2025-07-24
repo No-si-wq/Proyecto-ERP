@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Modal, Form, Input, Popconfirm, message, Tabs } from 'antd';
+import { Table, Button, Modal, Form, Input, Popconfirm, message, Tabs, Select } from 'antd';
 import { PlusOutlined, DeleteOutlined, HomeOutlined, EditOutlined, ReloadOutlined } from "@ant-design/icons";
 import { useNavigate } from 'react-router-dom';
 
 const { TabPane } = Tabs;
+const { Option } = Select;
 
 export default function PaymentMethods() {
   const [data, setData] = useState([]);
@@ -15,12 +16,20 @@ export default function PaymentMethods() {
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [form] = Form.useForm();
   const [page, setPage] = useState(1);
+  const [currencies, setCurrencies] = useState([]);
   const navigate = useNavigate();
 
-  // 🔁 Cargar datos cuando cambia la página
+  // Cargar datos cuando cambia la página
   useEffect(() => {
     fetchData(page);
+    fetchCurrencies();
   }, [page]);
+
+  const fetchCurrencies = () => {
+  fetch('/api/currencies')
+    .then(res => res.json())
+    .then(({ data }) => setCurrencies(data));
+  };
 
   const fetchData = async (p = 1) => {
     setLoading(true);
@@ -137,9 +146,19 @@ export default function PaymentMethods() {
         loading={loading}
         rowKey="id"
         rowSelection={{
-          type: 'radio',
+          type: 'checkbox',
           selectedRowKeys,
-          onChange: setSelectedRowKeys,
+          onChange: (newSelectedRowKeys) => {
+            const selectedKey = newSelectedRowKeys[0];
+
+            if (selectedRowKeys[0] === selectedKey) {
+              // Si se vuelve a seleccionar la misma fila, se deselecciona
+              setSelectedRowKeys([]);
+            } else {
+              // Solo se permite seleccionar una
+              setSelectedRowKeys(selectedKey ? [selectedKey] : []);
+            }
+          },
         }}
         pagination={{
           current: page,
@@ -184,7 +203,13 @@ export default function PaymentMethods() {
             <Input />
           </Form.Item>
           <Form.Item name="moneda" label="Moneda" rules={[{ required: true }]}>
-            <Input />
+            <Select placeholder="Seleccione una moneda">
+              {currencies.map(moneda => (
+                <Option key={moneda.id} value={moneda.clave}>
+                  {moneda.clave} - {moneda.descripcion}
+                </Option>
+              ))}
+            </Select>
           </Form.Item>
           <Button type="primary" htmlType="submit" block>
             {editMode ? "Actualizar" : "Guardar"}
