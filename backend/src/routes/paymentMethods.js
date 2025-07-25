@@ -9,14 +9,15 @@ router.get('/', async (req, res) => {
   const skip = (parseInt(page) - 1) * parseInt(limit);
 
   try {
-    const [data, total] = await Promise.all([
-      prisma.payment_methods.findMany({
-        skip,
-        take: parseInt(limit),
-        orderBy: { id: 'asc' }
-      }),
-      prisma.payment_methods.count()
-    ]);
+  const [data, total] = await Promise.all([
+    prisma.payment_methods.findMany({
+      skip,
+      take: parseInt(limit),
+      orderBy: { clave: 'asc' },
+      include: { moneda: true } 
+    }),
+    prisma.payment_methods.count()
+  ]);
 
     res.json({ data, total });
   } catch (err) {
@@ -27,17 +28,15 @@ router.get('/', async (req, res) => {
 
 // Crear nuevo método de pago
 router.post('/', async (req, res) => {
-  const { descripcion, tipo, moneda } = req.body;
-  if (!descripcion || !tipo || !moneda) {
+  const { descripcion, tipo, clave, monedaId } = req.body;
+
+  if (!clave || !descripcion || !tipo || !monedaId) {
     return res.status(400).send('Faltan campos obligatorios');
   }
 
   try {
-    const count = await prisma.payment_methods.count();
-    const clave = (count + 1).toString().padStart(2, '0');
-
     await prisma.payment_methods.create({
-      data: { clave, descripcion, tipo, moneda }
+      data: { clave, descripcion, tipo, monedaId: parseInt(monedaId) }
     });
 
     res.sendStatus(201);
@@ -49,15 +48,15 @@ router.post('/', async (req, res) => {
 
 // Editar método de pago
 router.put('/:id', async (req, res) => {
-  const { descripcion, tipo, moneda, clave } = req.body;
-  if (!clave || !descripcion || !tipo || !moneda) {
+  const { descripcion, tipo, clave, monedaId } = req.body;
+  if (!clave || !descripcion || !tipo || !monedaId) {
     return res.status(400).send('Faltan campos obligatorios');
   }
 
   try {
     await prisma.payment_methods.update({
       where: { id: parseInt(req.params.id) },
-      data: { clave, descripcion, tipo, moneda }
+      data: { clave, descripcion, tipo, monedaId: parseInt(monedaId) }
     });
 
     res.sendStatus(200);

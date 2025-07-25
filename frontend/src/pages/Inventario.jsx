@@ -65,7 +65,7 @@ const fetchTaxes = async () => {
 
     const formattedTaxes = data.map((tax) => ({
       value: tax.id, // Este es el que se usará para guardar y comparar
-      label: `${tax.clave} (${(tax.percent * 100).toFixed(2)}%)`, // Se mostrará esto
+      label: `(${(tax.percent * 100).toFixed(2)}%)`, // Se mostrará esto
       percent: tax.percent,
       raw: tax, // opcional si quieres acceder a toda la info
     }));
@@ -226,7 +226,7 @@ const onEdit = async (values) => {
       render: (tax) => {
         if (!tax || !tax.clave) return 'Sin impuesto';
         const percent = typeof tax.percent === 'number' ? (tax.percent * 100).toFixed(2) : '';
-        return `${tax.clave} ${percent ? `(${percent}%)` : ''}`;
+        return `${percent ? `(${percent}%)` : ''}`;
       }
     },
     {

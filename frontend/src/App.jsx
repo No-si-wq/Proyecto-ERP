@@ -8,7 +8,7 @@ import Register from './pages/auth/Register';
 import Home from './pages/Home';
 import Compras from './pages/Compras';
 import Ventas from './pages/Ventas';
-import Inventario from './pages/Inventario';
+import InventarioConsulta from './pages/InventarioConsulta';
 import Clientes from "./pages/Clientes";
 import Reportes from "./pages/Reportes";
 import Proveedores from "./pages/Proveedores";
@@ -21,6 +21,8 @@ import FacturasCompras from "./pages/FacturasCompras";
 import PaymentMethods from './pages/PaymentMethods';
 import CurrencyPage from './pages/CurrencyPage';
 import TaxesPage from './pages/TaxesPage';
+import Tiendas from './pages/Tiendas';
+import Cajas from './pages/Cajas';
 
 function App() {
   return (
@@ -31,7 +33,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/ventas" element={<PrivateRoute><Ventas /></PrivateRoute>} />
           <Route path="/compras" element={<PrivateRoute><Compras /></PrivateRoute>} />
-          <Route path="/inventario" element={<PrivateRoute><Inventario /></PrivateRoute>} />
+          <Route path="/inventarioConsulta" element={<PrivateRoute><InventarioConsulta /></PrivateRoute>} />
           <Route path="/clientes" element={<PrivateRoute><Clientes /></PrivateRoute>} />
           <Route path="/proveedores" element={<PrivateRoute><Proveedores /></PrivateRoute>} />
           <Route path="/reportes" element={<PrivateRoute><Reportes /></PrivateRoute>} />
@@ -42,6 +44,9 @@ function App() {
           <Route path='/formas-pago' element={<PrivateRoute><PaymentMethods /></PrivateRoute>} />
           <Route path='/monedas' element={<PrivateRoute><CurrencyPage/></PrivateRoute>} />
           <Route path='/impuestos' element={<PrivateRoute><TaxesPage/></PrivateRoute>} />
+          <Route path='/tiendas' element={<PrivateRoute><Tiendas/></PrivateRoute>} />
+          <Route path='/cajas' element={<PrivateRoute><Cajas/></PrivateRoute>} />
+          {/* Default route */}
           <Route 
             path="/home" 
             element={

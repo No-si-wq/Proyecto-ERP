@@ -47,8 +47,10 @@ model Product {
   createdAt     DateTime       @default(now())
   categoryId    Int?
   taxId         Int
+  storeId       Int?
   invoiceItems  InvoiceItem[]
   category      Category?      @relation(fields: [categoryId], references: [id])
+  store         Store?         @relation(fields: [storeId], references: [id])
   tax           Tax            @relation(fields: [taxId], references: [id])
   purchaseItems PurchaseItem[]
 }
@@ -114,11 +116,12 @@ model Category {
 }
 
 model payment_methods {
-  id          Int    @id @default(autoincrement())
-  clave       String @db.VarChar(10)
-  descripcion String @db.VarChar(50)
-  tipo        String @db.VarChar(30)
-  moneda      String @db.VarChar(30)
+  id           Int       @id @default(autoincrement())
+  clave        String    @db.VarChar(10)
+  descripcion  String    @db.VarChar(50)
+  tipo         String    @db.VarChar(30)
+  monedaId     Int
+  moneda       Currency  @relation(fields: [monedaId], references: [id])
 }
 
 model Currency {
@@ -128,6 +131,7 @@ model Currency {
   abreviatura String   @db.VarChar(10)
   tipoCambio  Float
   fecha       DateTime @updatedAt
+  payment_methods payment_methods[]
 }
 
 model Tax {
@@ -138,14 +142,23 @@ model Tax {
   products    Product[]
 }
 
-model prisma_migrations {
-  id                  Int       @id @default(dbgenerated("nextval('_prisma_migrations_id_seq'::regclass)"))
-  migration_name      String
-  checksum            String
-  finished_at         DateTime?
-  applied_steps_count Int       @default(0)
-  rolled_back_at      DateTime?
-  applied_at          DateTime  @default(now())
+model Store {
+  id         Int            @id @default(autoincrement())
+  clave      String         @unique
+  nombre     String
+  direccion  String
+  telefono   String
+  cajas      CashRegister[] 
+  inventario Product[]      
+}
 
-  @@map("_prisma_migrations")
+model CashRegister {
+  id          Int     @id @default(autoincrement())
+  numeroDeCaja Int
+  descripcion  String
+  formatoNota  String
+  formatoCFDI  String
+
+  storeId      Int
+  store        Store   @relation(fields: [storeId], references: [id])
 }

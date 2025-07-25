@@ -20,6 +20,8 @@ import {
   GlobalOutlined,
   FileOutlined,
 } from "@ant-design/icons";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCashRegister } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/AuthProvider";
 
@@ -62,6 +64,7 @@ const modules = [
       { key: "categorias", title: "Categorías", icon: <FileOutlined />, path: "/categorias" },
       { key: "monedas", title: "Monedas", icon: <GlobalOutlined />, path: "/monedas" },
       { key: "impuestos", title: "Esquema de Impuestos", icon: <FileTextOutlined  />, path: "/impuestos" },
+      { key: "cajas", title: "Cajas Registradoras", icon: <FontAwesomeIcon icon={faCashRegister} />, path: "/cajas" },
       // Puedes agregar más catálogos aquí
     ]
   },
@@ -70,7 +73,7 @@ const modules = [
     title: "Inventario",
     icon: <AppstoreOutlined />,
     submenu: [
-      { key: "inventario", title: "Panel de inventario", icon: <FileSearchOutlined />, path: "/inventario" }
+      { key: "inventario", title: "Panel de inventario", icon: <FileSearchOutlined />, path: "/inventarioConsulta" }
     ]
   },
   {

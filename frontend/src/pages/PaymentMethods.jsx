@@ -46,14 +46,15 @@ export default function PaymentMethods() {
   };
 
   const handleAdd = async (values) => {
+    const { clave, descripcion, tipo, monedaId } = values;
     try {
       await fetch('/api/payment-methods', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values)
+         body: JSON.stringify({ clave, descripcion, tipo, monedaId })
       });
-      await fetchData(); 
-      setPage(); 
+      await fetchData();
+      setPage(1);
       message.success('Método de pago agregado');
     } catch {
       message.error('Error al agregar método de pago');
@@ -100,7 +101,12 @@ export default function PaymentMethods() {
     { title: 'Clave', dataIndex: 'clave', key: 'clave' },
     { title: 'Descripción', dataIndex: 'descripcion', key: 'descripcion' },
     { title: 'Tipo', dataIndex: 'tipo', key: 'tipo' },
-    { title: 'Moneda', dataIndex: 'moneda', key: 'moneda' },
+    {
+      title: 'Moneda',
+      dataIndex: 'moneda',
+      key: 'moneda',
+      render: (moneda) => moneda ? `${moneda.descripcion}` : ''
+    },
   ];
 
   return (
@@ -202,11 +208,11 @@ export default function PaymentMethods() {
           <Form.Item name="tipo" label="Tipo" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="moneda" label="Moneda" rules={[{ required: true }]}>
+          <Form.Item name="monedaId" label="Moneda" rules={[{ required: true }]}>
             <Select placeholder="Seleccione una moneda">
               {currencies.map(moneda => (
-                <Option key={moneda.id} value={moneda.clave}>
-                  {moneda.clave} - {moneda.descripcion}
+                <Option key={moneda.id} value={moneda.id}>
+                  {moneda.descripcion}
                 </Option>
               ))}
             </Select>

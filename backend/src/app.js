@@ -20,6 +20,9 @@ const pool = new Pool({
 const authRouter = require('./routes/auth')(pool);
 const categoriesRoutes = require('./routes/categories');
 const paymentMethodsRouter = require('./routes/paymentMethods');
+const storesRouter = require('./routes/stores');
+const cashRegisterRoutes = require('./routes/cashRegisters');
+const inventarioRoutes = require("./routes/inventario");
 app.use('/api/auth', authRouter);
 app.use('/api/clientes', require('./routes/clients'));
 app.use('/api/proveedores', require('./routes/suppliers'));
@@ -32,5 +35,8 @@ app.use('/api/currencies', require('./routes/currencies'));
 app.use('/api/taxes', require('./routes/taxes'));
 app.use('/api/payment-methods', paymentMethodsRouter);
 app.use('/api/categorias', categoriesRoutes);
+app.use('/api/stores', storesRouter);
+app.use('/api/cash-registers', cashRegisterRoutes);
+app.use("/api", inventarioRoutes);
 
 module.exports = app;
