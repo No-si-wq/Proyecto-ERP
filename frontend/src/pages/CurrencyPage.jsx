@@ -36,6 +36,31 @@ export default function CurrencyPage() {
     }
   };
 
+    const validateClave = async (_, value) => {
+      if (!value || editMode) return Promise.resolve(); // Solo validar en modo agregar
+
+      try {
+        const res = await fetch(`/api/currencies/check-clave/${value}`);
+        const { exists } = await res.json();
+        if (exists) {
+          Modal.error({
+            title: 'Clave duplicada',
+            content: `La clave "${value}" ya está registrada.`,
+            okText: 'Aceptar'
+          });
+          return Promise.reject(new Error('La clave ya existe'));
+        }
+        return Promise.resolve();
+      } catch {
+        Modal.error({
+          title: 'Error de validación',
+          content: 'No se pudo verificar la clave en este momento.',
+          okText: 'Aceptar'
+        });
+        return Promise.reject(new Error('Error al validar clave'));
+      }
+    };
+
   const handleAdd = async (values) => {
     try {
       await fetch('/api/currencies', {
@@ -185,7 +210,12 @@ export default function CurrencyPage() {
             }
           }}
         >
-          <Form.Item name="clave" label="Clave" rules={[{ required: true }]}>
+          <Form.Item name="clave" label="Clave" 
+            rules={[
+              { required: true, message: 'La clave es obligatoria' },
+              { validator: validateClave }
+            ]}
+          >
             <Input disabled={editMode} />
           </Form.Item>
           <Form.Item name="descripcion" label="Descripción" rules={[{ required: true }]}>

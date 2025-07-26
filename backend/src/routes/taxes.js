@@ -71,11 +71,45 @@ router.delete('/:id', async (req, res) => {
 // Obtener la siguiente clave
 router.get('/next-clave', async (req, res) => {
   try {
-    const count = await prisma.tax.count();
-    const clave = (count + 1).toString().padStart(2, '0');
+    // Obtener todas las claves existentes ordenadas ascendentemente
+    const existing = await prisma.tax.findMany({
+      select: { clave: true },
+      orderBy: { clave: 'asc' }
+    });
+
+    // Convertir a un conjunto de claves numéricas
+    const existingNumbers = new Set(
+      existing
+        .map(pm => parseInt(pm.clave))
+        .filter(n => !isNaN(n))
+    );
+
+    // Buscar el menor número disponible
+    let next = 1;
+    while (existingNumbers.has(next)) {
+      next++;
+    }
+
+    const clave = next.toString().padStart(2, '0');
     res.json({ clave });
   } catch (err) {
-    res.status(500).send('Error al generar clave');
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/check-clave/:clave', async (req, res) => {
+  const { clave } = req.params;
+
+  try {
+    const exists = await prisma.tax.findFirst({
+      where: { clave: clave }
+    });
+
+    res.json({ exists: !!exists });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al verificar la clave' });
   }
 });
 

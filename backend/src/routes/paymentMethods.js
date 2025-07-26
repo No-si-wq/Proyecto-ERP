@@ -82,19 +82,47 @@ router.delete('/:id', async (req, res) => {
 
 router.get('/next-clave', async (req, res) => {
   try {
-    // Contar todos los registros de payment_methods usando Prisma
-    const count = await prisma.payment_methods.count();
+    // Obtener todas las claves existentes ordenadas ascendentemente
+    const existing = await prisma.payment_methods.findMany({
+      select: { clave: true },
+      orderBy: { clave: 'asc' }
+    });
 
-    // Calcular el siguiente número y formatearlo con 2 dígitos
-    const nextNumber = count + 1;
-    const clave = nextNumber.toString().padStart(2, '0');
+    // Convertir a un conjunto de claves numéricas
+    const existingNumbers = new Set(
+      existing
+        .map(pm => parseInt(pm.clave))
+        .filter(n => !isNaN(n))
+    );
 
+    // Buscar el menor número disponible
+    let next = 1;
+    while (existingNumbers.has(next)) {
+      next++;
+    }
+
+    const clave = next.toString().padStart(2, '0');
     res.json({ clave });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 });
 
+// Verificar si una clave ya existe
+router.get('/check-clave/:clave', async (req, res) => {
+  const { clave } = req.params;
 
+  try {
+    const exists = await prisma.payment_methods.findFirst({
+      where: { clave: clave }
+    });
+
+    res.json({ exists: !!exists });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al verificar la clave' });
+  }
+});
 
 module.exports = router;
