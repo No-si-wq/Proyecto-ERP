@@ -21,7 +21,7 @@ import FacturasCompras from "./pages/FacturasCompras";
 import PaymentMethods from './pages/PaymentMethods';
 import CurrencyPage from './pages/CurrencyPage';
 import TaxesPage from './pages/TaxesPage';
-import Tiendas from './pages/Tiendas';
+import TiendasUI from './pages/TiendasUI';
 import Cajas from './pages/Cajas';
 
 function App() {
@@ -44,7 +44,7 @@ function App() {
           <Route path='/formas-pago' element={<PrivateRoute><PaymentMethods /></PrivateRoute>} />
           <Route path='/monedas' element={<PrivateRoute><CurrencyPage/></PrivateRoute>} />
           <Route path='/impuestos' element={<PrivateRoute><TaxesPage/></PrivateRoute>} />
-          <Route path='/tiendas' element={<PrivateRoute><Tiendas/></PrivateRoute>} />
+          <Route path='/tiendas' element={<PrivateRoute><TiendasUI/></PrivateRoute>} />
           <Route path='/cajas' element={<PrivateRoute><Cajas/></PrivateRoute>} />
           {/* Default route */}
           <Route 

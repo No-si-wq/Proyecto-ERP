@@ -3,48 +3,25 @@ const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-// Obtener todos los productos con categoría e impuesto
-router.get('/', async (req, res) => {
-  try {
-    const productos = await prisma.product.findMany({
-      include: {
-        category: {
-          select: { id: true, name: true }
-        },
-        tax: {
-          select: { id: true, clave: true, descripcion: true, percent: true }
-        }
-      },
-      orderBy: {
-        id: 'asc'
-      }
-    });
-
-    res.json(productos);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Error al obtener productos');
-  }
-});
-
-router.get('/tienda/:storeId', async (req, res) => {
-  const storeId = parseInt(req.params.storeId, 10);
+router.get("/products/by-store/:storeId", async (req, res) => {
+  const storeId = parseInt(req.params.storeId);
+  if (isNaN(storeId)) return res.status(400).json({ error: "storeId inválido" });
 
   try {
     const productos = await prisma.product.findMany({
       where: { storeId },
-      include: {
-        store: { select: { id: true, nombre: true } },
-        category: { select: { id: true, name: true } },
-        tax: { select: { id: true, clave: true, descripcion: true, percent: true } }
+      select: {
+        id: true,
+        name: true,
+        sku: true,
+        price: true,
+        quantity: true,
+        category: { select: { name: true } }
       },
-      orderBy: { id: 'asc' }
     });
-
     res.json(productos);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Error al obtener productos de la tienda');
+  } catch (error) {
+    res.status(500).json({ error: "Error al obtener productos" });
   }
 });
 

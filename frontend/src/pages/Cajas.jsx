@@ -23,35 +23,63 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
 const { TabPane } = Tabs;
-
 const Cajas = () => {
   const [cajas, setCajas] = useState([]);
-  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+  const [stores, setStores] = useState([]);
   const [selectedCaja, setSelectedCaja] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [editMode, setEditMode] = useState(false);
-    const [stores, setStores] = useState([]);
   const [form] = Form.useForm();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    fetchCajas();
+    fetchStores();
+  }, []);
+
   const fetchCajas = async () => {
     try {
-      const { data } = await axios.get("/api/cash-registers");
+      const storeId = 1; // por ejemplo, la tienda actual o la primera
+      const { data } = await axios.get(`/api/cash-registers/por-tienda/${storeId}`);
       setCajas(data);
     } catch (err) {
       message.error("Error al cargar cajas", err);
     }
   };
 
-    const fetchStores = async () => {
-      const res = await axios.get("/api/stores"); // tu endpoint real aquí
-      setStores(res.data);
-    };
+  const fetchStores = async () => {
+    try {
+      const { data } = await axios.get("/api/stores");
+      setStores(data);
+    } catch {
+      message.error("Error al cargar tiendas");
+    }
+  };
 
-  useEffect(() => {
-    fetchCajas();
-    fetchStores();
-  }, []);
+  const validateClave = async (_, value) => {
+    if (!value || editMode) return Promise.resolve(); // Solo validar en modo agregar
+
+    try {
+      const res = await fetch(`/api/cash-registers/check-clave/${value}`);
+      const { exists } = await res.json();
+      if (exists) {
+        Modal.error({
+          title: 'Numero duplicada',
+          content: `El numero "${value}" ya está registrado.`,
+          okText: 'Aceptar'
+        });
+        return Promise.reject(new Error('El numero ya existe'));
+      }
+      return Promise.resolve();
+    } catch {
+      Modal.error({
+        title: 'Error de validación',
+        content: 'No se pudo verificar la clave en este momento.',
+        okText: 'Aceptar'
+      });
+      return Promise.reject(new Error('Error al validar clave'));
+    }
+  };
 
   const handleAdd = async (values) => {
     try {
@@ -68,8 +96,8 @@ const Cajas = () => {
       await axios.put(`/api/cash-registers/${selectedCaja.id}`, values);
       message.success("Caja actualizada");
       fetchCajas();
-    } catch (err) {
-      message.error("Error al actualizar caja", err);
+    } catch {
+      message.error("Error al actualizar caja");
     }
   };
 
@@ -79,9 +107,8 @@ const Cajas = () => {
       message.success("Caja eliminada");
       fetchCajas();
       setSelectedCaja(null);
-      setSelectedRowKeys([]);
-    } catch (err) {
-      message.error("Error al eliminar caja", err);
+    } catch {
+      message.error("Error al eliminar caja");
     }
   };
 
@@ -91,8 +118,8 @@ const Cajas = () => {
     form.resetFields();
 
     try {
-      const res = await axios.get("/api/cash-registers/next-clave");
-      form.setFieldsValue({ numeroDeCaja: res.data.clave });
+      const { data } = await axios.get("/api/cash-registers/next-clave");
+      form.setFieldsValue({ numeroDeCaja: data.clave });
     } catch {
       message.error("No se pudo obtener el número de caja");
     }
@@ -108,92 +135,60 @@ const Cajas = () => {
       descripcion: selectedCaja.descripcion,
       formatoNota: selectedCaja.formatoNota,
       formatoCFDI: selectedCaja.formatoCFDI,
+      storeId: selectedCaja.storeId,
     });
     setModalVisible(true);
   };
 
   const onFinish = async (values) => {
-    const valuesToSend = {
+    const formatted = {
       ...values,
-      numeroDeCaja: Number(values.numeroDeCaja) // fuerza tipo number
+      numeroDeCaja: Number(values.numeroDeCaja),
     };
-    if (editMode) {
-      await handleEdit(values);
-    } else {
-      await handleAdd(values);
-    }
+    editMode ? await handleEdit(formatted) : await handleAdd(formatted);
     setModalVisible(false);
     form.resetFields();
   };
 
   const columns = [
-    { title: "ID", dataIndex: "id", key: "id" },
-    { title: "Número de Caja", dataIndex: "numeroDeCaja", key: "numeroDeCaja" },
-    { title: "Descripción", dataIndex: "descripcion", key: "descripcion" },
-    { title: "Formato Nota", dataIndex: "formatoNota", key: "formatoNota" },
-    { title: "Formato CFDI", dataIndex: "formatoCFDI", key: "formatoCFDI" },
+    { title: "ID", dataIndex: "id" },
+    { title: "Número de Caja", dataIndex: "numeroDeCaja" },
+    { title: "Descripción", dataIndex: "descripcion" },
+    { title: "Formato Nota", dataIndex: "formatoNota" },
+    { title: "Formato CFDI", dataIndex: "formatoCFDI" },
   ];
 
   return (
     <div style={{ padding: 20 }}>
-      <Tabs defaultActiveKey="1" style={{ marginBottom: 20 }}>
+      <Tabs defaultActiveKey="1">
         <TabPane tab="Archivo" key="1" />
         <TabPane tab="Catálogos" key="2" />
         <TabPane tab="Configuración" key="3" />
       </Tabs>
 
-      <div style={{ marginBottom: 16 }}>
-        <Button icon={<HomeOutlined />} onClick={() => navigate("/home")} style={{ marginRight: 8 }}>
-          Inicio
-        </Button>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={openAddModal}
-          style={{ marginRight: 8 }}
+      <Space style={{ marginBottom: 16 }}>
+        <Button icon={<HomeOutlined />} onClick={() => navigate("/home")}>Inicio</Button>
+        <Button type="primary" icon={<PlusOutlined />} onClick={openAddModal}>Añadir</Button>
+        <Button icon={<EditOutlined />} disabled={!selectedCaja} onClick={openEditModal}>Editar</Button>
+        <Popconfirm
+          title="¿Seguro que deseas eliminar esta caja?"
+          onConfirm={handleDelete}
+          okText="Sí"
+          cancelText="No"
         >
-          Añadir
-        </Button>
-        <Button
-          icon={<EditOutlined />}
-          onClick={openEditModal}
-          disabled={!selectedCaja}
-          style={{ marginRight: 8 }}
-        >
-          Editar
-        </Button>
-        <Popconfirm title="¿Seguro que deseas eliminar esta caja?" onConfirm={handleDelete}>
-          <Button
-            icon={<DeleteOutlined />}
-            danger
-            disabled={!selectedCaja}
-            style={{ marginRight: 8 }}
-          >
-            Eliminar
-          </Button>
+          <Button icon={<DeleteOutlined />} danger disabled={!selectedCaja}>Eliminar</Button>
         </Popconfirm>
-        <Button icon={<ReloadOutlined />} onClick={fetchCajas}>
-          Actualizar
-        </Button>
-      </div>
+        <Button icon={<ReloadOutlined />} onClick={fetchCajas}>Actualizar</Button>
+      </Space>
 
       <Table
         rowKey="id"
         columns={columns}
         dataSource={cajas}
-        rowSelection={{
-          type: "checkbox",
-          selectedRowKeys,
-          onChange: (keys, rows) => {
-            if (keys[0] === selectedRowKeys[0]) {
-              setSelectedRowKeys([]);
-              setSelectedCaja(null);
-            } else {
-              setSelectedRowKeys([keys[0]]);
-              setSelectedCaja(rows[0]);
-            }
-          },
-        }}
+        onRow={(record) => ({
+          onClick: () => setSelectedCaja(record),
+        })}
+        rowClassName={(record) => (selectedCaja?.id === record.id ? "ant-table-row-selected" : "")}
         pagination={{ pageSize: 10 }}
       />
 
@@ -205,64 +200,33 @@ const Cajas = () => {
           form.resetFields();
         }}
         footer={null}
+        destroyOnClose
       >
         <Form form={form} layout="vertical" onFinish={onFinish}>
           <Form.Item
             name="numeroDeCaja"
             label="Número de Caja"
-            validateTrigger="onBlur"
-              rules={[
-                { required: true, message: "Número de caja requerido" },
-                {
-                  validator: async (_, value) => {
-                    if (!value) return Promise.resolve();
-                    if (editMode) return Promise.resolve(); // no validar en modo edición
-
-                    try {
-                      const res = await axios.get(`/api/cash-registers/exists/${value}`);
-                      if (res.data.exists) {
-                        return Promise.reject(new Error("La clave de la caja ya existe"));
-                      }
-                    } catch {
-                      return Promise.reject(new Error("Error al verificar la clave"));
-                    }
-                    return Promise.resolve();
-                  },
-                },
-              ]}
+            rules={[
+              { required: true, message: 'El número de caja es obligatorio' },
+              { validator: validateClave }
+            ]}
           >
             <Input type="number" disabled={editMode} />
           </Form.Item>
 
-          <Form.Item
-            name="descripcion"
-            label="Descripción"
-            rules={[{ required: true, message: "Descripción requerida" }]}
-          >
+          <Form.Item name="descripcion" label="Descripción" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
 
-          <Form.Item
-            name="formatoNota"
-            label="Formato Nota"
-            rules={[{ required: true, message: "Formato de nota requerido" }]}
-          >
+          <Form.Item name="formatoNota" label="Formato Nota" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
 
-          <Form.Item
-            name="formatoCFDI"
-            label="Formato CFDI"
-            rules={[{ required: true, message: "Formato CFDI requerido" }]}
-          >
+          <Form.Item name="formatoCFDI" label="Formato CFDI" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
 
-          <Form.Item
-            name="storeId"
-            label="Tienda"
-            rules={[{ required: true, message: "Seleccione una tienda" }]}
-          >
+          <Form.Item name="storeId" label="Tienda" rules={[{ required: true }]}>
             <Select placeholder="Seleccione una tienda">
               {stores.map((store) => (
                 <Select.Option key={store.id} value={store.id}>

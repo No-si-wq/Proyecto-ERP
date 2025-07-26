@@ -15,9 +15,9 @@ import {
 import {
   PlusOutlined,
   DeleteOutlined,
+  FileExcelOutlined,
   HomeOutlined,
   EditOutlined,
-  FilePdfOutlined,
   ReloadOutlined,
   AppstoreOutlined,
   SearchOutlined,
@@ -25,6 +25,8 @@ import {
   SettingOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 const { TabPane } = Tabs;
 
@@ -32,6 +34,33 @@ const { TabPane } = Tabs;
 const Inventario = () => {
   const navigate = useNavigate();
   const [productos, setProductos] = useState([]);
+    const exportToExcel = () => {
+  const data = productos.map((prod) => ({
+    Nombre: prod.name,
+    SKU: prod.sku,
+    Cantidad: prod.quantity,
+    "Precio con impuesto": prod.price.toFixed(2),
+    "Precio sin impuesto": (
+      prod.tax && prod.tax.percent
+        ? prod.price / (1 + prod.tax.percent)
+        : prod.price
+    ).toFixed(2),
+    Impuesto: prod.tax ? `${(prod.tax.percent * 100).toFixed(2)}%` : "0%",
+    Categoría: prod.category?.name || "Sin categoría",
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Inventario");
+
+  const excelBuffer = XLSX.write(workbook, {
+    bookType: "xlsx",
+    type: "array",
+  });
+
+  const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
+  saveAs(blob, "Inventario.xlsx");
+};
   const [categorias, setCategorias] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -39,7 +68,6 @@ const Inventario = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [selectedProducto, setSelectedProducto] = useState(null);
   const [form] = Form.useForm();
-  const [editForm] = Form.useForm();
 
   // Para controlar el precio sin impuesto y el precio con impuesto en los formularios
   const [precioBase, setPrecioBase] = useState(0);
@@ -50,6 +78,55 @@ const Inventario = () => {
   const [editPrecioConImpuesto, setEditPrecioConImpuesto] = useState(0);
   const [selectedTax, setSelectedTax] = useState(null);
   const [editSelectedTax, setEditSelectedTax] = useState(null);
+  const [busqueda, setBusqueda] = useState("");
+  const [productosFiltrados, setProductosFiltrados] = useState([]);
+  const [editForm] = Form.useForm();
+
+    useEffect(() => {
+    if (selectedProducto && taxOptions.length > 0) {
+      const impuesto = taxOptions.find(
+        (t) => t.value === selectedProducto.tax?.id
+      );
+
+      if (impuesto) {
+        const percent = impuesto.percent;
+        const base = selectedProducto.price / (1 + percent);
+
+        setEditPrecioBase(Number(base.toFixed(2)));
+        setEditPrecioConImpuesto(Number(selectedProducto.price.toFixed(2)));
+        setEditSelectedTax(impuesto.value);
+
+        editForm.setFieldsValue({
+          name: selectedProducto.name,
+          sku: selectedProducto.sku,
+          quantity: selectedProducto.quantity,
+          price_base: Number(base.toFixed(2)),
+          price: Number(selectedProducto.price.toFixed(2)),
+          categoryId: selectedProducto.category?.id,
+          taxId: impuesto.value,
+        });
+      }
+    }
+  }, [selectedProducto, taxOptions]);
+
+  useEffect(() => {
+    const delayDebounce = setTimeout(() => {
+      if (!busqueda.trim()) {
+        setProductosFiltrados(productos);
+      } else {
+        const term = busqueda.toLowerCase();
+        const filtrados = productos.filter(
+          (prod) =>
+            prod.name.toLowerCase().includes(term) ||
+            prod.sku.toLowerCase().includes(term) ||
+            prod.category?.name?.toLowerCase().includes(term)
+        );
+        setProductosFiltrados(filtrados);
+      }
+    }, 300); // ⏱ debounce 300ms
+
+    return () => clearTimeout(delayDebounce);
+  }, [busqueda, productos]);
 
   // Obtener productos y categorías al cargar la página
   useEffect(() => {
@@ -95,6 +172,7 @@ const fetchTaxes = async () => {
       const res = await fetch("/api/inventario");
       const data = await res.json();
       setProductos(data);
+      setProductosFiltrados(data);
     } catch {
       message.error("Error al cargar el inventario");
     }
@@ -116,8 +194,8 @@ const fetchTaxes = async () => {
 const onCreate = async (values) => {
   try {
     const percent = getTaxPercent(selectedTax);
-    const base = parseFloat(values.price_base).toFixed(2);
-    const price = parseFloat(base * (1 + percent)).toFixed(2);
+    const base = Number(values.price_base);
+    const price = Number((base * (1 + percent)).toFixed(2));
 
 
     const dataToSend = {
@@ -151,9 +229,8 @@ const onCreate = async (values) => {
 const onEdit = async (values) => {
   try {
     const percent = getTaxPercent(editSelectedTax);
-    const base = parseFloat(values.price_base).toFixed(2);
-    const price = parseFloat(base * (1 + percent)).toFixed(2);
-
+    const base = Number(values.price_base);
+    const price = Number((base * (1 + percent)).toFixed(2));
 
     const dataToSend = {
       ...values,
@@ -351,8 +428,20 @@ const rowSelection = {
               Actualizar
             </Button>
           </Tooltip>
-          <Tooltip title="Exportar PDF">
-            <Button icon={<FilePdfOutlined />}>PDF</Button>
+          <Tooltip title="Exportar a Excel">
+            <Button icon={<FileExcelOutlined />} onClick={exportToExcel}>
+              Excel
+            </Button>
+          </Tooltip>
+          <Tooltip title="Buscar productos">
+            <Input
+              placeholder="Buscar por nombre, SKU o categoría"
+              prefix={<SearchOutlined />}
+              style={{ width: 300 }}
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              allowClear
+            />
           </Tooltip>
         </Space>
       </TabPane>
@@ -449,7 +538,7 @@ const rowSelection = {
         {ribbonActions}
         <Table
           columns={columns}
-          dataSource={productos}
+          dataSource={productosFiltrados}
           loading={loading}
           rowKey="id"
           size="middle"
@@ -525,12 +614,11 @@ const rowSelection = {
               ))}
             </Select>
           </Form.Item>
-
           <Form.Item label="Precio con impuesto">
             <InputNumber
               value={precioConImpuesto}
-              style={{ width: "100%" }}
               readOnly
+              style={{ width: "100%" }}
               formatter={(value) => Number(value).toFixed(2)}
             />
           </Form.Item>
