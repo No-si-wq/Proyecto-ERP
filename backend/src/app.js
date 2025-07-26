@@ -37,6 +37,6 @@ app.use('/api/payment-methods', paymentMethodsRouter);
 app.use('/api/categorias', categoriesRoutes);
 app.use('/api/stores', storesRouter);
 app.use('/api/cash-registers', cashRegisterRoutes);
-app.use("/api", inventarioRoutes);
+app.use("/api/inventario", inventarioRoutes);
 
 module.exports = app;

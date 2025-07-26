@@ -1,15 +1,24 @@
 import React, { useState, useEffect } from "react";
-import { Layout, Tabs, Typography } from "antd";
-import { ShopOutlined, AppstoreOutlined, DatabaseOutlined, PercentageOutlined } from "@ant-design/icons";
+import { Layout, Tabs, Typography, message } from "antd";
+import {
+  ShopOutlined,
+  AppstoreOutlined,
+  DatabaseOutlined,
+  PercentageOutlined,
+} from "@ant-design/icons";
 import { useTiendas } from "../hooks/useTiendas";
-import { fetchInventarioByStore, createStore } from "../api/storesAPI";
+import {
+  createStore,
+  updateStore,
+  deleteStore,
+  fetchInventarioByStore,
+} from "../api/storesAPI";
 import SidebarMenu from "../components/SidebarMenu";
 import InventarioView from "../components/InventarioView";
 
 const { Sider, Content } = Layout;
 const { Title } = Typography;
 
-// Función para obtener el componente de icono según el nombre
 const getIcon = (iconName) => {
   switch (iconName) {
     case "shop":
@@ -26,78 +35,116 @@ const getIcon = (iconName) => {
 };
 
 const TiendasUI = () => {
-  const { treeData, setTreeData } = useTiendas();
+  const { treeData, setTreeData, fetchTiendas } = useTiendas();
   const [selectedKey, setSelectedKey] = useState(null);
   const [inventario, setInventario] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
-
-  // Cargar inventario cuando cambie la tienda seleccionada (solo módulo inventarios)
+  const [selectedStoreId, setSelectedStoreId] = useState(null);
+  const loadStores = fetchTiendas;
+  
   useEffect(() => {
-    if (!selectedKey?.includes("-Inventarios")) return;
+    loadStores();
+  }, []);
 
-    const tiendaClave = selectedKey.split("-")[0];
-    fetchInventarioByStore(tiendaClave)
-      .then(setInventario)
-      .catch(() => setInventario([]));
+  // Detecta si seleccionaron el nodo "Inventarios" y extrae el ID
+  useEffect(() => {
+    const storeId = extractStoreIdFromKey(selectedKey);
+    setSelectedStoreId(storeId);
+
+      if (!selectedKey?.includes("-inventario") && storeId){
+        fetchInventarioByStore(storeId)
+          .then(setInventario)
+          .catch(() => setInventario([]));
+    }
+
+    if (!selectedKey) {
+      setSelectedStoreId(null);
+      return;
+    }
+
+    const match = selectedKey.match(/^store-(\d+)/);
+      if (match) {
+        setSelectedStoreId(parseInt(match[1]));
+      } else {
+        setSelectedStoreId(null);
+      }
   }, [selectedKey]);
 
-  // Crear nueva tienda y actualizar árbol
-  const handleCreate = async () => {
-    const nombre = prompt("Nombre:");
-    const clave = prompt("Clave:");
-    const direccion = prompt("Dirección:");
-    const telefono = prompt("Teléfono:");
+  const extractStoreIdFromKey = (key) => {
+    const match = key?.match(/^store-(\d+)-/);
+    return match ? parseInt(match[1]) : null;
+  };
 
-    if (!nombre || !clave || !direccion || !telefono) {
-      alert("Todos los campos son requeridos.");
+  const extractStoreClave = (id) => {
+    const tienda = treeData.find((t) => t.id === id);
+    return tienda?.clave ?? null;
+  };
+
+  const handleCreate = async (data) => {
+    try {
+      await createStore(data);
+      await fetchTiendas();
+      message.success("Tienda creada con éxito");
+    } catch (error) {
+      console.error(error);
+      message.error("Error al crear tienda");
+    }
+  };
+
+  const handleUpdate = async (id, values) => {
+    try {
+      await updateStore(id, values); // ahora pasamos el ID correcto
+      await fetchTiendas();
+      message.success("Tienda actualizada");
+    } catch (error) {
+      console.error(error);
+      message.error("Error al actualizar tienda");
+    }
+  };
+
+  const handleDelete = async () => {
+    const storeId = extractStoreIdFromKey(selectedKey);
+    const clave = extractStoreClave(storeId);
+
+    if (!clave) {
+      message.error("No se pudo encontrar la tienda seleccionada");
       return;
     }
 
     try {
-      const nueva = await createStore({ nombre, clave, direccion, telefono });
-
-      const nuevaTiendaNode = {
-        title: nueva.nombre,
-        key: nueva.clave,
-        icon: "shop",  // Solo el nombre del icono
-        children: [
-          { title: "Cajas", key: `${nueva.clave}-Cajas`, icon: "appstore" },
-          { title: "Inventarios", key: `${nueva.clave}-Inventarios`, icon: "database" },
-          { title: "Políticas", key: `${nueva.clave}-Políticas`, icon: "percentage" },
-        ],
-      };
-
-      setTreeData((prev) => [...prev, nuevaTiendaNode]);
+      await deleteStore(clave);
+      await fetchTiendas();
+      if (selectedKey?.includes(clave)) {
+        setSelectedKey(null);
+      }
+      message.success("Tienda eliminada");
     } catch (error) {
-      alert("Error al crear tienda", error);
+      console.error(error);
+      message.error("No se pudo eliminar la tienda");
     }
   };
 
-  // Renderiza contenido basado en la tienda seleccionada
   const renderContent = () => {
     if (!selectedKey) return <Title level={4}>Seleccione una tienda o módulo</Title>;
 
-    const [clave, modulo] = selectedKey.split("-");
+    const modulo = selectedKey.split("-")[2]; // ahora tomamos la tercera parte
     switch (modulo) {
-      case "Inventarios":
-        return <InventarioView inventario={inventario} searchTerm={searchTerm} onSearch={setSearchTerm} />;
-      case "Cajas":
+      case "inventario":
+        return <InventarioView storeId={selectedStoreId} />;
+      case "cajas":
         return <p>Cajas aquí</p>;
-      case "Políticas":
-        return <p>Políticas de oferta aquí</p>;
+      case "politicas":
+        return <p>Políticas aquí</p>;
       default:
-        return <p>Resumen de tienda</p>;
+        return <p>Resumen</p>;
     }
   };
 
-  // Renderizar los iconos en el Sidebar
-  const renderTreeWithIcons = (data) => {
-    return data.map((node) => ({
+  const renderTreeWithIcons = (data) =>
+    data.map((node) => ({
       ...node,
-      icon: getIcon(node.icon),  // Convertimos el nombre del icono en el componente JSX
+      icon: getIcon(node.icon),
       children: node.children ? renderTreeWithIcons(node.children) : [],
     }));
-  };
 
   const renderedTreeData = renderTreeWithIcons(treeData);
 
@@ -107,8 +154,12 @@ const TiendasUI = () => {
         <SidebarMenu
           treeData={renderedTreeData}
           selectedKey={selectedKey}
-          onSelect={(keys, info) => setSelectedKey(info.node.key)}
+          onSelect={(keys) => setSelectedKey(keys[0])}
           onCreate={handleCreate}
+          onUpdate={handleUpdate}
+          onDelete={handleDelete}
+          onReload={loadStores}
+          selectedStoreId={selectedStoreId}
         />
       </Sider>
       <Layout>

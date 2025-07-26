@@ -3,6 +3,48 @@ const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+router.get('/next-clave', async (req, res) => {
+  try {
+    console.log('Petición recibida a /next-clave');
+    const existing = await prisma.store.findMany({ select: { clave: true } });
+    console.log('Claves existentes:', existing);
+
+    const existingNumbers = new Set(
+      existing
+        .map(pm => parseInt(pm.clave))
+        .filter(n => !isNaN(n))
+    );
+
+    let next = 1;
+    while (existingNumbers.has(next)) {
+      next++;
+    }
+
+    const clave = next.toString().padStart(2, '0');
+    console.log('Clave siguiente generada:', clave);
+    res.json({ clave });
+  } catch (err) {
+    console.error('Error en /next-clave:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Verificar si una clave ya existe
+router.get('/check-clave/:clave', async (req, res) => {
+  const { clave } = req.params;
+
+  try {
+    const exists = await prisma.store.findFirst({
+      where: { clave: clave }
+    });
+
+    res.json({ exists: !!exists });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al verificar la clave' });
+  }
+});
+
 // Obtener todas las tiendas con cajas e inventario
 router.get('/', async (req, res) => {
   try {
@@ -62,9 +104,35 @@ router.post('/', async (req, res) => {
   }
 });
 
+// Obtener tienda por ID
+router.get('/:id', async (req, res) => {
+  const tiendaId = parseInt(req.params.id, 10);
+  if (isNaN(tiendaId)) {
+    return res.status(400).send("ID inválido");
+  }
+
+  try {
+    const tienda = await prisma.store.findUnique({
+      where: { id: tiendaId }
+    });
+
+    if (!tienda) {
+      return res.status(404).send('Tienda no encontrada');
+    }
+
+    res.json(tienda);
+  } catch (err) {
+    console.error('Error al obtener tienda:', err);
+    res.status(500).send('Error al obtener tienda');
+  }
+});
+
 // Editar tienda
 router.put('/:id', async (req, res) => {
   const tiendaId = parseInt(req.params.id, 10);
+  if (isNaN(tiendaId)) {
+    return res.status(400).send("ID inválido");
+  }
   const { clave, nombre, direccion, telefono } = req.body;
 
   if (!clave || !nombre || !direccion || !telefono) {
@@ -91,29 +159,35 @@ router.put('/:id', async (req, res) => {
 
 // Eliminar tienda (solo si no tiene cajas ni inventario)
 router.delete('/:id', async (req, res) => {
-  const tiendaId = parseInt(req.params.id, 10);
-
+  const storeId = parseInt(req.params.id);
   try {
-    const cajas = await prisma.cashRegister.count({
-      where: { storeId: tiendaId }
-    });
+    const tienda = await prisma.store.findUnique({ where: { id: storeId } });
 
-    const inventario = await prisma.product.count({
-      where: { storeId: tiendaId }
-    });
-
-    if (cajas > 0 || inventario > 0) {
-      return res.status(400).send('No se puede eliminar una tienda con cajas o inventario.');
+    if (!tienda) {
+      return res.status(404).send('La tienda no existe');
     }
 
-    await prisma.store.delete({
-      where: { id: tiendaId }
+    // Verificar si tiene relaciones activas
+    const tieneInventario = await prisma.product.findFirst({
+      where: { storeId },
     });
 
-    res.sendStatus(200);
-  } catch (err) {
-    console.error('Error al eliminar tienda:', err);
-    res.status(500).send('Error al eliminar tienda');
+    const tieneCajas = await prisma.cashRegister.findFirst({
+      where: { storeId },
+    });
+
+    if (tieneInventario || tieneCajas) {
+      return res
+        .status(400)
+        .send('No se puede eliminar una tienda con cajas o inventario.');
+    }
+
+    await prisma.store.delete({ where: { id: storeId } });
+
+    return res.status(200).send('Tienda eliminada exitosamente');
+  } catch (error) {
+    console.error('Error al eliminar tienda:', error);
+    return res.status(500).send('Error interno al eliminar la tienda');
   }
 });
 
