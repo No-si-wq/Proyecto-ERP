@@ -22,6 +22,7 @@ import {
   SettingOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 const { TabPane } = Tabs;
 
@@ -29,11 +30,9 @@ const Categorias = () => {
   const [categorias, setCategorias] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [modalEditVisible, setModalEditVisible] = useState(false);
-  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [selectedCategoria, setSelectedCategoria] = useState(null);
+  const [editMode, setEditMode] = useState(false);
   const [form] = Form.useForm();
-  const [editForm] = Form.useForm();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -52,40 +51,6 @@ const Categorias = () => {
     setLoading(false);
   };
 
-  const onCreate = async (values) => {
-    try {
-      await fetch("/api/categorias", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
-      });
-      message.success("Categoría añadida");
-      setModalVisible(false);
-      form.resetFields();
-      fetchCategorias();
-    } catch {
-      message.error("No se pudo añadir la categoría");
-    }
-  };
-
-  const onEdit = async (values) => {
-    try {
-      await fetch(`/api/categorias/${selectedCategoria.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
-      });
-      message.success("Categoría editada");
-      setModalEditVisible(false);
-      setSelectedRowKeys([]);
-      setSelectedCategoria(null);
-      editForm.resetFields();
-      fetchCategorias();
-    } catch {
-      message.error("No se pudo editar la categoría");
-    }
-  };
-
   const onDelete = async () => {
     if (!selectedCategoria) return;
     Modal.confirm({
@@ -100,7 +65,6 @@ const Categorias = () => {
             method: "DELETE",
           });
           message.success("Categoría eliminada");
-          setSelectedRowKeys([]);
           setSelectedCategoria(null);
           fetchCategorias();
         } catch {
@@ -110,31 +74,55 @@ const Categorias = () => {
     });
   };
 
+  const openCreateModal = () => {
+    setEditMode(false);
+    setSelectedCategoria(null);
+    form.resetFields();
+    setModalVisible(true);
+  };
+
+  const openEditModal = () => {
+    if (!selectedCategoria) return;
+    setEditMode(true);
+    form.setFieldsValue({
+      name: selectedCategoria.name,
+    });
+    setModalVisible(true);
+  };
+
+    const onFinish = async (values) => {
+    if (editMode && selectedCategoria) {
+      // Editar
+      try {
+        await axios.put(`/api/categorias/${selectedCategoria.id}`, values);
+        message.success("Usuario actualizado");
+      } catch {
+        message.error("No se pudo editar el usuario");
+      }
+    } else {
+      // Crear
+      try {
+        await fetch("/api/categorias", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(values),
+        });
+        message.success("Usuario añadido");
+      } catch {
+        message.error("No se pudo añadir el usuario");
+      }
+    }
+
+    setModalVisible(false);
+    form.resetFields();
+    setSelectedCategoria(null);
+    fetchCategorias();
+  };
+
+
   const columns = [
     { title: "Nombre", dataIndex: "name", key: "name" },
   ];
-
-  const rowSelection = {
-    type: 'checkbox',
-    selectedRowKeys,
-    onChange: (selectedKeys, selectedRows) => {
-      if (
-        selectedRowKeys.length > 0 &&
-        selectedKeys[0] === selectedRowKeys[0]
-      ) {
-        setSelectedRowKeys([]);
-        setSelectedCategoria(null); // o current/null según el archivo
-      } else {
-        setSelectedRowKeys(selectedKeys);
-        setSelectedCategoria(selectedRows[0] || null);
-      }
-      if (selectedRows[0]) {
-        editForm.setFieldsValue({
-          name: selectedRows[0].name,
-        });
-      }
-    },
-  };
 
   const ribbonActions = (
     <Tabs defaultActiveKey="1" type="card" style={{ marginBottom: 16 }}>
@@ -146,12 +134,12 @@ const Categorias = () => {
             </Button>
           </Tooltip>
           <Tooltip title="Agregar categoría">
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalVisible(true)}>
+            <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
               Añadir
             </Button>
           </Tooltip>
           <Tooltip title="Editar categoría">
-            <Button icon={<EditOutlined />} disabled={!selectedCategoria} onClick={() => setModalEditVisible(true)}>
+            <Button icon={<EditOutlined />} disabled={!selectedCategoria} onClick={openEditModal}>
               Editar
             </Button>
           </Tooltip>
@@ -185,44 +173,27 @@ const Categorias = () => {
           dataSource={categorias}
           loading={loading}
           rowKey="id"
-          rowSelection={rowSelection}
           pagination={{ pageSize: 10 }}
+          onRow={(record) => ({
+          onClick: () => setSelectedCategoria(record),
+        })}
+        rowClassName={(record) => (selectedCategoria?.id === record.id ? "ant-table-row-selected" : "")}
           style={{ background: "white", borderRadius: 4 }}
         />
       </div>
 
       <Modal
-        title="Añadir Categoría"
+        title={editMode ? "Editar Categoría" : "Añadir Categoría"}
         open={modalVisible}
         onCancel={() => {
           setModalVisible(false);
           form.resetFields();
+          setSelectedCategoria(null);
         }}
         onOk={() => form.submit()}
         destroyOnClose
       >
-        <Form form={form} onFinish={onCreate} layout="vertical">
-          <Form.Item
-            name="name"
-            label="Nombre"
-            rules={[{ required: true, message: "Ingrese el nombre de la categoría" }]}
-          >
-            <Input />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      <Modal
-        title="Editar Categoría"
-        open={modalEditVisible}
-        onCancel={() => {
-          setModalEditVisible(false);
-          editForm.resetFields();
-        }}
-        onOk={() => editForm.submit()}
-        destroyOnClose
-      >
-        <Form form={editForm} onFinish={onEdit} layout="vertical">
+        <Form form={form} onFinish={onFinish} layout="vertical">
           <Form.Item
             name="name"
             label="Nombre"

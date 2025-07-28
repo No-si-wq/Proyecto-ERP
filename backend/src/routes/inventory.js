@@ -11,6 +11,7 @@ const validateNumericId = (id) => {
 
 router.get('/by-store/:storeId', async (req, res) => {
   const storeId = validateNumericId(req.params.storeId);
+  console.log("Store ID recibido:", storeId);
   if (!storeId) return res.status(400).json({ error: 'storeId inválido' });
 
   try {
@@ -22,11 +23,22 @@ router.get('/by-store/:storeId', async (req, res) => {
         sku: true,
         quantity: true,
         price: true,
-        category: { select: { name: true } },
-        tax: { select: { percent: true } },
+        category: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        tax: {
+          select: {
+            id: true,
+            clave: true,
+            descripcion: true,
+            percent: true,
+          },
+        },
       },
     });
-
     res.json(productos);
   } catch (error) {
     console.error('Error al obtener productos:', error);
@@ -34,40 +46,42 @@ router.get('/by-store/:storeId', async (req, res) => {
   }
 });
 
-router.post('/tienda/:storeId', async (req, res) => {
-  const storeId = validateNumericId(req.params.storeId);
-  const { name, sku, quantity, price, categoryId, taxId } = req.body;
+router.post("/tienda/:storeId", async (req, res) => {
+  const storeId = parseInt(req.params.storeId);
+  const { name, sku, quantity, price, taxId, categoryId } = req.body;
 
-  if (!storeId || !name || !sku || typeof quantity !== 'number' || typeof price !== 'number' || !taxId) {
-    return res.status(400).json({ error: 'Faltan campos obligatorios o inválidos' });
+  if (!name || !sku || !quantity || !price || !taxId) {
+    return res.status(400).json({ error: "Faltan campos requeridos" });
   }
 
   try {
-    const producto = await prisma.product.create({
+    // Crear producto asignado a tienda
+    const nuevoProducto = await prisma.product.create({
       data: {
         name,
         sku,
         quantity,
         price,
-        store: { connect: { id: storeId } },
-        category: categoryId ? { connect: { id: categoryId } } : undefined,
-        tax: { connect: { id: taxId } },
+        taxId,
+        categoryId: categoryId || null,
+        storeId,
       },
       include: {
-        store: { select: { id: true, nombre: true } },
-        category: { select: { id: true, name: true } },
-        tax: { select: { id: true, clave: true, descripcion: true, percent: true } },
+        tax: true,
+        category: true,
+        store: true,
       },
     });
-
-    res.status(201).json(producto);
+    res.json(nuevoProducto);
   } catch (error) {
-    console.error('Error al crear producto:', error);
-    if (error.code === 'P2002' && error.meta?.target?.includes('sku')) {
-      return res.status(409).json({ error: 'El SKU ya existe' });
+    console.error("Error creando producto:", error);
+    if (
+      error.code === "P2002" && 
+      error.meta.target.includes("sku_storeId")
+    ) {
+      return res.status(409).json({ error: "El SKU ya existe para esta tienda" });
     }
-
-    res.status(500).json({ error: 'Error interno al crear producto' });
+    res.status(500).json({ error: "Error al crear producto" });
   }
 });
 
@@ -98,14 +112,20 @@ router.put('/:id', async (req, res) => {
       },
     });
 
-    res.json(updated);
+    return res.json(updated); // siempre JSON
   } catch (error) {
     console.error('Error al actualizar producto:', error);
+
+    // 💥 POSIBLE ERROR AQUÍ
     if (error.code === 'P2002' && error.meta?.target?.includes('sku')) {
       return res.status(409).json({ error: 'El SKU ya existe' });
     }
 
-    res.status(500).json({ error: 'Error interno al actualizar producto' });
+    // POSIBLE ERROR: NO SE USA res.json()
+    return res.status(500).json({
+      error: 'Error interno al actualizar producto',
+      details: error.message || error,
+    });
   }
 });
 

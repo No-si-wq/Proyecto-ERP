@@ -38,7 +38,13 @@ export const deleteStore = async (id) => {
 };
 
 export const fetchInventarioByStore = async (storeId) => {
-  const res = await fetch(`/api/products/by-store/${storeId}`);
+  const res = await fetch(`/api/inventario/by-store/${storeId}`);
   if (!res.ok) throw new Error("Error al obtener inventario");
+  return res.json();
+};
+
+export const fetchCajasByStore = async (storeId) => {
+  const res = await fetch(`/api/cash-registers/by-store/${storeId}`);
+  if (!res.ok) throw new Error("Error al obtener Cajas");
   return res.json();
 };

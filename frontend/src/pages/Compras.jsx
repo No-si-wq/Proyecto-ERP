@@ -23,7 +23,11 @@ const Compras = () => {
   const [loading, setLoading] = useState(false);
   const [folio, setFolio] = useState("");
   const [metodosPago, setMetodosPago] = useState([]);
-
+  const [modalSeleccionTienda, setModalSeleccionTienda] = useState(false);
+  const [tiendasDisponibles, setTiendasDisponibles] = useState([]);
+  const [tiendaSeleccionada, setTiendaSeleccionada] = useState(null);
+  const [mostradorSeleccionado, setMostradorSeleccionado] = useState(null);
+  const ventaHabilitada = Boolean(tiendaSeleccionada && mostradorSeleccionado);
 
   // Nuevos estados para el flujo de pago
   const [modalPanelConfirmar, setModalPanelConfirmar] = useState(false);
@@ -51,14 +55,6 @@ const Compras = () => {
         message.error("No se pudieron cargar los proveedores");
       }
     };
-    const fetchProductos = async () => {
-      try {
-        const res = await fetch("/api/inventario");
-        setProductos(await res.json());
-      } catch {
-        message.error("No se pudieron cargar los productos");
-      }
-    };
     const fetchMetodosPago = async () => {
       try {
         const res = await fetch("/api/payment-methods");
@@ -71,8 +67,44 @@ const Compras = () => {
     fetchMetodosPago();
     fetchFolio();
     fetchProveedores();
-    fetchProductos();
   }, []);
+
+  useEffect(() => {
+    const mostrarModalSeleccion = async () => {
+      try {
+        const res = await fetch("/api/stores");
+        const data = await res.json();
+        setTiendasDisponibles(data);
+        setModalSeleccionTienda(true); // Siempre mostrar al entrar
+      } catch {
+        message.error("No se pudieron cargar las tiendas");
+      }
+    };
+
+    mostrarModalSeleccion();
+  }, []);
+
+    const fetchProductos = async () => {
+    if (!tiendaSeleccionada) {
+      message.warning("Selecciona una tienda primero.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/inventario/by-store/${tiendaSeleccionada}`);
+      const data = await res.json();
+      console.log("Productos cargados para tienda:", tiendaSeleccionada, data);
+      setProductos(data);
+    } catch {
+      message.error("No se pudieron cargar los productos");
+    }
+  };
+
+  useEffect(() => {
+    if (tiendaSeleccionada) {
+      fetchProductos();
+    }
+  }, [tiendaSeleccionada]);
 
   // Agregar producto al carrito
   const agregarProducto = (id) => {
@@ -100,6 +132,7 @@ const Compras = () => {
   const handleNuevaCompra = () => {
     setCarrito([]);
     setProveedorSeleccionado(null);
+    setModalSeleccionTienda(true);
     setPagosRecibidos([]);
     fetchFolio();
   };
@@ -138,6 +171,8 @@ const Compras = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           supplierId: proveedorSeleccionado,
+          storeId: tiendaSeleccionada,
+          cajaId: mostradorSeleccionado, 
           productos: carrito.map(({ id, cantidad, price }) => ({ productoId: id, cantidad, price })),
           pagos: pagosRecibidos, // puedes guardar pagos si tu backend lo soporta
         }),
@@ -224,6 +259,7 @@ const Compras = () => {
   // Selector de productos
   const selectorProductos = (
     <Select
+      disabled={!ventaHabilitada}
       showSearch
       placeholder="Buscar o seleccionar producto"
       style={{ width: 300 }}
@@ -373,6 +409,11 @@ const Compras = () => {
         }}>
           <Title level={4} style={{ marginBottom: 16 }}>Registro de Compras</Title>
           <Text type="secondary" style={{ fontSize: 18, fontWeight: "bold" }}>FOLIO: {folio}</Text>
+            {(!ventaHabilitada ) && (
+              <div style={{ background: "#fff3cd", padding: 16, margin: "16px 0", border: "1px solid #ffeeba", borderRadius: 6 }}>
+                <Text strong>Debes seleccionar una tienda y un mostrador para comenzar a registrar una venta.</Text>
+              </div>
+            )}
           <div style={{ display: "flex", alignItems: "flex-start", gap: 36 }}>
             <div style={{ flex: 1 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
@@ -391,13 +432,15 @@ const Compras = () => {
                 style={{ marginBottom: 16 }}
                 size="small"
                 scroll={{ x: true }}
-                summary={() => (
+                summary={() => 
+                  ventaHabilitada ?  (
                   <Table.Summary.Row>
                     <Table.Summary.Cell index={0} colSpan={4}><b>Total:</b></Table.Summary.Cell>
                     <Table.Summary.Cell index={1}><b>L. {totalCompra.toFixed(2)}</b></Table.Summary.Cell>
                     <Table.Summary.Cell index={2} />
                   </Table.Summary.Row>
-                )}
+                ) : null
+              }
               />
               <Button
                 type="primary"
@@ -406,7 +449,7 @@ const Compras = () => {
                 block
                 style={{ fontSize: 24, height: 60, marginTop: 8 }}
                 onClick={() => setModalPanelConfirmar(true)}
-                disabled={carrito.length === 0 || loading}
+                disabled={!ventaHabilitada || carrito.length === 0 || loading}
               >
                 REGISTRAR COMPRA
               </Button>
@@ -420,6 +463,65 @@ const Compras = () => {
         onCancel={() => setModalProveedor(false)}
         confirmLoading={proveedorLoading}
       />
+      <Modal
+        open={modalSeleccionTienda}
+        title="Selecciona la Tienda y Mostrador"
+        onCancel={() => setModalSeleccionTienda(false)}
+        onOk={() => {
+          if (!tiendaSeleccionada || !mostradorSeleccionado) {
+            message.warning("Selecciona tienda y mostrador");
+            return;
+          }
+
+          fetchFolio(); // Obtener folio para la venta
+
+          // Aquí llamamos a fetchProductos con la tienda seleccionada
+          fetchProductos(tiendaSeleccionada);
+
+          setCarrito([]);
+          setPagosRecibidos([]);
+          setModalSeleccionTienda(false);
+          message.success(`Tienda ${tiendaSeleccionada} / Mostrador ${mostradorSeleccionado} seleccionado`);
+        }}
+      >
+        <div style={{ marginBottom: 12 }}>
+          <label>Tienda:</label>
+          <Select
+            style={{ width: "100%" }}
+            placeholder="Selecciona una tienda"
+            value={tiendaSeleccionada}
+            onChange={(value) => {
+              setTiendaSeleccionada(value);
+              setMostradorSeleccionado(null); // Reinicia mostrador al cambiar tienda
+            }}
+          >
+            {tiendasDisponibles.map((tienda) => (
+              <Select.Option key={tienda.id} value={tienda.id}>
+                {tienda.nombre}
+              </Select.Option>
+            ))}
+          </Select>
+        </div>
+        <div>
+          <label>Mostrador:</label>
+          <Select
+            style={{ width: "100%" }}
+            placeholder="Selecciona un mostrador"
+            value={mostradorSeleccionado}
+            onChange={setMostradorSeleccionado}
+            disabled={!tiendaSeleccionada}
+          >
+            {tiendaSeleccionada &&
+              tiendasDisponibles
+                .find(t => t.id === tiendaSeleccionada)
+                ?.cajas?.map((mostrador) => (
+                  <Select.Option key={mostrador.id} value={mostrador.id}>
+                    {mostrador.descripcion || mostrador.numeroDeCaja}
+                  </Select.Option>
+                ))}
+          </Select>
+        </div>
+      </Modal>
       {/* MODAL PARA CONFIRMAR COMPRA Y FORMAS DE PAGO */}
       <Modal
         open={modalPanelConfirmar}

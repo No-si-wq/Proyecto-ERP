@@ -34,7 +34,7 @@ const { TabPane } = Tabs;
 const Inventario = () => {
   const navigate = useNavigate();
   const [productos, setProductos] = useState([]);
-    const exportToExcel = () => {
+  const exportToExcel = () => {
   const data = productos.map((prod) => ({
     Nombre: prod.name,
     SKU: prod.sku,

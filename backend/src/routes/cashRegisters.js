@@ -4,7 +4,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 // Obtener cajas por tienda
-router.get('/por-tienda/:storeId', async (req, res) => {
+router.get('/by-store/:storeId', async (req, res) => {
   const storeId = parseInt(req.params.storeId);
   if (isNaN(storeId)) return res.status(400).json({ error: 'storeId inválido' });
 
@@ -17,15 +17,16 @@ router.get('/por-tienda/:storeId', async (req, res) => {
 });
 
 // Crear una caja en una tienda
-router.post('/', async (req, res) => {
-  const { numeroDeCaja, descripcion, formatoNota, formatoCFDI, storeId } = req.body;
+router.post('/tienda/:storeId', async (req, res) => {
+  const { numeroDeCaja, descripcion, formatoNota, formatoCFDI } = req.body;
+  const storeId = parseInt(req.params.storeId);
 
-  if (!numeroDeCaja || !descripcion || !formatoNota || !formatoCFDI || !storeId) {
+  // Validaciones
+  if (!numeroDeCaja || !descripcion || !formatoNota || !formatoCFDI) {
     return res.status(400).json({ error: 'Faltan campos obligatorios' });
   }
 
-  const storeIdInt = parseInt(storeId);
-  if (isNaN(storeIdInt)) {
+  if (isNaN(storeId)) {
     return res.status(400).json({ error: 'storeId debe ser un número válido' });
   }
 
@@ -36,7 +37,7 @@ router.post('/', async (req, res) => {
         descripcion,
         formatoNota,
         formatoCFDI,
-        store: { connect: { id: storeIdInt } }
+        store: { connect: { id: storeId } }
       }
     });
 

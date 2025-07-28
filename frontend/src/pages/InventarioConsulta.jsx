@@ -55,10 +55,10 @@ const InventarioConsulta = () => {
     }
   };
 
-  const fetchProductos = async (tiendaId) => {
+  const fetchProductos = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/productos/tienda/${tiendaId}`);
+      const res = await fetch(`/api/inventarios/tienda/${storeId}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 

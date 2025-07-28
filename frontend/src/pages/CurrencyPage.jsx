@@ -12,7 +12,6 @@ export default function CurrencyPage() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [current, setCurrent] = useState(null);
-  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [form] = Form.useForm();
   const [page, setPage] = useState(1);
   const navigate = useNavigate();
@@ -90,22 +89,19 @@ export default function CurrencyPage() {
   };
 
   const onEdit = () => {
-    const selected = data.find(item => item.id === selectedRowKeys[0]);
-    if (!selected) return message.warning('Selecciona un registro');
-    setEditMode(true);
-    setCurrent(selected);
-    form.setFieldsValue(selected);
-    setModalVisible(true);
-  };
+    if (!current) return message.warning('Selecciona un registro');
+      setEditMode(true);
+      form.setFieldsValue(current);
+      setModalVisible(true);
+    };
 
   const onDelete = async () => {
-    const id = selectedRowKeys[0];
-    if (!id) return message.warning('Selecciona un registro');
+    if (!current) return message.warning('Selecciona un registro');
     try {
-      await fetch(`/api/currencies/${id}`, { method: 'DELETE' });
-      message.success('Moneda eliminada');
+      await fetch(`/api/currencies/${current.id}`, { method: 'DELETE' });
+      message.success('Método de pago eliminado');
       fetchData(page);
-      setSelectedRowKeys([]);
+      setCurrent(null);
     } catch {
       message.error('Error al eliminar');
     }
@@ -150,9 +146,9 @@ export default function CurrencyPage() {
         >
           Añadir
         </Button>
-        <Button icon={<EditOutlined />} onClick={onEdit} style={{ marginRight: 8 }} disabled={selectedRowKeys.length !== 1}>Editar</Button>
+        <Button icon={<EditOutlined />} onClick={onEdit} style={{ marginRight: 8 }} disabled={!current}>Editar</Button>
         <Popconfirm title="¿Seguro que deseas eliminar?" onConfirm={onDelete}>
-          <Button icon={<DeleteOutlined />} danger style={{ marginRight: 8 }} disabled={selectedRowKeys.length !== 1}>Eliminar</Button>
+          <Button icon={<DeleteOutlined />} danger style={{ marginRight: 8 }} disabled={!current}>Eliminar</Button>
         </Popconfirm>
         <Button icon={<ReloadOutlined />} onClick={() => fetchData(page)}>Actualizar</Button>
       </div>
@@ -162,27 +158,18 @@ export default function CurrencyPage() {
         dataSource={data}
         loading={loading}
         rowKey="id"
-        rowSelection={{
-          type: 'checkbox',
-          selectedRowKeys,
-          onChange: (newSelectedRowKeys) => {
-            const selectedKey = newSelectedRowKeys[0];
-
-            if (selectedRowKeys[0] === selectedKey) {
-              // Si se vuelve a seleccionar la misma fila, se deselecciona
-              setSelectedRowKeys([]);
-            } else {
-              // Solo se permite seleccionar una
-              setSelectedRowKeys(selectedKey ? [selectedKey] : []);
-            }
-          },
-        }}
         pagination={{
           current: page,
           pageSize: 10,
           total,
           onChange: setPage,
         }}
+        onRow={(record) => ({
+          onClick: () => {setCurrent((prev) => (prev?.id === record.id ? null : record));},
+        })}
+        rowClassName={(record) =>
+          current?.id === record.id ? 'ant-table-row-selected' : ''
+        }
       />
 
       <Modal

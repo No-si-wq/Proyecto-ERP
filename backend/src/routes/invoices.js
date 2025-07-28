@@ -53,7 +53,12 @@ router.get('/next-folio', async (req, res) => {
 
 // Registrar una venta con múltiples productos
 router.post('/', async (req, res) => {
-  const { clienteId, productos, importeRecibido, cambio, formasPago } = req.body;
+  const { clienteId, productos, importeRecibido, cambio, formasPago, storeId, cajaId } = req.body;
+
+    if (!storeId || !cajaId) {
+      return res.status(400).json({ error: "Faltan storeId o cajaId" });
+    }
+
   try {
     // Validar productos y stock, obtener precios actuales
     let total = 0;
@@ -89,16 +94,26 @@ router.post('/', async (req, res) => {
     const invoice = await prisma.invoice.create({
       data: {
         folio,
-        clientId: clienteId,
         total,
         importeRecibido: importeRecibido ?? null,
         cambio: cambio ?? null,
         formasPago: formasPago ? JSON.stringify(formasPago) : undefined,
+        client: {connect: { id: clienteId }},
+        caja: {
+          connect: { id: cajaId }
+        },
+        store: {
+          connect: { id: storeId }
+        },
+
         items: {
           create: productosData,
         },
       },
-      include: { items: { include: { product: true } }, client: true },
+      include: {
+        items: { include: { product: true } },
+        client: true
+      }
     });
 
     // Actualizar inventario
@@ -127,6 +142,7 @@ router.post('/', async (req, res) => {
     });
   } catch (err) {
     console.error(err);
+    console.error('Error al registrar venta:', err);
     res.status(500).json({ error: 'Error al registrar la venta y generar la factura' });
   }
 });

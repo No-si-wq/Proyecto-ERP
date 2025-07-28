@@ -4,7 +4,7 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
 // GET /api/productos/tienda/:storeId
-router.get("/productos/tienda/:storeId", async (req, res) => {
+router.get("/tienda/:storeId", async (req, res) => {
   const { storeId } = req.params;
 
   try {

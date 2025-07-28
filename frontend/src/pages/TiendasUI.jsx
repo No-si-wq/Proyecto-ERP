@@ -12,9 +12,11 @@ import {
   updateStore,
   deleteStore,
   fetchInventarioByStore,
+  fetchCajasByStore,
 } from "../api/storesAPI";
 import SidebarMenu from "../components/SidebarMenu";
 import InventarioView from "../components/InventarioView";
+import CajasView from "../components/CajasView";
 
 const { Sider, Content } = Layout;
 const { Title } = Typography;
@@ -38,6 +40,7 @@ const TiendasUI = () => {
   const { treeData, setTreeData, fetchTiendas } = useTiendas();
   const [selectedKey, setSelectedKey] = useState(null);
   const [inventario, setInventario] = useState([]);
+  const [cajas, setCajas] = useState([]);
   const [selectedStoreId, setSelectedStoreId] = useState(null);
   const loadStores = fetchTiendas;
   
@@ -54,12 +57,18 @@ const TiendasUI = () => {
         fetchInventarioByStore(storeId)
           .then(setInventario)
           .catch(() => setInventario([]));
-    }
+        } 
 
-    if (!selectedKey) {
-      setSelectedStoreId(null);
-      return;
-    }
+        if (!selectedKey?.includes("-cajas") && storeId){
+          fetchCajasByStore(storeId)
+            .then(setCajas)
+            .catch(() => setCajas([]));
+          } 
+
+      if (!selectedKey) {
+        setSelectedStoreId(null);
+        return;
+      }
 
     const match = selectedKey.match(/^store-(\d+)/);
       if (match) {
@@ -131,7 +140,7 @@ const TiendasUI = () => {
       case "inventario":
         return <InventarioView storeId={selectedStoreId} />;
       case "cajas":
-        return <p>Cajas aquí</p>;
+        return <CajasView storeId={selectedStoreId} />;
       case "politicas":
         return <p>Políticas aquí</p>;
       default:

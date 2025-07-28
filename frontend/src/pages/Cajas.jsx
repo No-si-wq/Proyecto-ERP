@@ -26,25 +26,45 @@ const { TabPane } = Tabs;
 const Cajas = () => {
   const [cajas, setCajas] = useState([]);
   const [stores, setStores] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [selectedCaja, setSelectedCaja] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [selectedStoreId, setSelectedStoreId] = useState(null);
   const [form] = Form.useForm();
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchCajas();
-    fetchStores();
+  const cargarDatos = async () => {
+    try {
+      const { data } = await axios.get("/api/stores");
+      setStores(data);
+      if (data.length > 0) {
+        setSelectedStoreId(data[0].id); // Selecciona la primera tienda por defecto
+      }
+    } catch {
+      message.error("Error al cargar tiendas");
+    }
+  };
+  cargarDatos();
+  fetchCajas();
+  fetchStores();
   }, []);
 
+  useEffect(() => {
+    fetchCajas();
+  }, [selectedStoreId]);
+
   const fetchCajas = async () => {
+    if (!selectedStoreId) return;
+    setLoading(true);
     try {
-      const storeId = 1; // por ejemplo, la tienda actual o la primera
-      const { data } = await axios.get(`/api/cash-registers/por-tienda/${storeId}`);
+      const { data } = await axios.get(`/api/cash-registers/by-store/${selectedStoreId}`);
       setCajas(data);
     } catch (err) {
       message.error("Error al cargar cajas", err);
     }
+    setLoading(false);
   };
 
   const fetchStores = async () => {
@@ -181,10 +201,28 @@ const Cajas = () => {
         <Button icon={<ReloadOutlined />} onClick={fetchCajas}>Actualizar</Button>
       </Space>
 
+      <br />
+
+      <Space>
+        <Select
+          style={{ width: 200, marginBottom: 16 }}
+          value={selectedStoreId}
+          onChange={(value) => setSelectedStoreId(value)}
+          placeholder="Seleccione una tienda"
+        >
+          {stores.map((store) => (
+            <Select.Option key={store.id} value={store.id}>
+              {store.nombre}
+            </Select.Option>
+          ))}
+        </Select>
+      </Space>
+
       <Table
         rowKey="id"
         columns={columns}
-        dataSource={cajas}
+        dataSource={cajas} 
+        loading={loading}
         onRow={(record) => ({
           onClick: () => setSelectedCaja(record),
         })}

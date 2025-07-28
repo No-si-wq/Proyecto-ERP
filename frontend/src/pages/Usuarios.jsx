@@ -24,6 +24,7 @@ import {
   HomeOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 const { TabPane } = Tabs;
 
@@ -31,11 +32,9 @@ const Usuarios = () => {
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [modalEditVisible, setModalEditVisible] = useState(false);
-  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [selectedUsuario, setSelectedUsuario] = useState(null);
+  const [editMode, setEditMode] = useState(false);
   const [form] = Form.useForm();
-  const [editForm] = Form.useForm();
   const navigate = useNavigate();
 
   // Obtener usuarios
@@ -55,43 +54,6 @@ const Usuarios = () => {
     fetchUsuarios();
   }, []);
 
-  // Crear usuario
-  const onCreate = async (values) => {
-    try {
-      await fetch("/api/usuarios", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
-      });
-      message.success("Usuario añadido");
-      setModalVisible(false);
-      form.resetFields();
-      fetchUsuarios();
-    } catch {
-      message.error("No se pudo añadir el usuario");
-    }
-  };
-
-  // Editar usuario
-  const onEdit = async (values) => {
-    if (!selectedUsuario) return;
-    try {
-      await fetch(`/api/usuarios/${selectedUsuario.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
-      });
-      message.success("Usuario actualizado");
-      setModalEditVisible(false);
-      setSelectedUsuario(null);
-      setSelectedRowKeys([]);
-      editForm.resetFields();
-      fetchUsuarios();
-    } catch {
-      message.error("No se pudo editar el usuario");
-    }
-  };
-
   // Eliminar usuario
   const onDelete = async () => {
     if (!selectedUsuario) return;
@@ -103,11 +65,8 @@ const Usuarios = () => {
       cancelText: "Cancelar",
       onOk: async () => {
         try {
-          await fetch(`/api/usuarios/${selectedUsuario.id}`, {
-            method: "DELETE",
-          });
+          await axios.delete(`/api/usuarios/${selectedUsuario.id}`);
           message.success("Usuario eliminado");
-          setSelectedRowKeys([]);
           setSelectedUsuario(null);
           fetchUsuarios();
         } catch {
@@ -115,6 +74,54 @@ const Usuarios = () => {
         }
       },
     });
+  };
+
+    const openCreateModal = () => {
+    setEditMode(false);
+    setSelectedUsuario(null);
+    form.resetFields();
+    setModalVisible(true);
+  };
+
+  const openEditModal = () => {
+    if (!selectedUsuario) return;
+    setEditMode(true);
+    form.setFieldsValue({
+      username: selectedUsuario.username,
+      email: selectedUsuario.email,
+      password: "", // en blanco o puedes mostrar un valor encriptado si quieres
+      role: selectedUsuario.role,
+    });
+    setModalVisible(true);
+  };
+
+  const onFinish = async (values) => {
+    if (editMode && selectedUsuario) {
+      // Editar
+      try {
+        await axios.put(`/api/usuarios/${selectedUsuario.id}`, values);
+        message.success("Usuario actualizado");
+      } catch {
+        message.error("No se pudo editar el usuario");
+      }
+    } else {
+      // Crear
+      try {
+        await fetch("/api/usuarios", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(values),
+        });
+        message.success("Usuario añadido");
+      } catch {
+        message.error("No se pudo añadir el usuario");
+      }
+    }
+
+    setModalVisible(false);
+    form.resetFields();
+    setSelectedUsuario(null);
+    fetchUsuarios();
   };
 
   // Tabla
@@ -130,38 +137,6 @@ const Usuarios = () => {
       render: (v) => new Date(v).toLocaleString(),
     },
   ];
-
-  // Selección de filas
-  const rowSelection = {
-    type: "checkbox",
-    selectedRowKeys,
-    onChange: (newSelectedKeys, selectedRows) => {
-      if (
-        selectedRowKeys.length === 1 &&
-        newSelectedKeys.length === 1 &&
-        newSelectedKeys[0] === selectedRowKeys[0]
-      ) {
-        setSelectedRowKeys([]);
-        setSelectedUsuario(null);
-        editForm.resetFields();
-        return;
-      }
-
-      const selectedRow = selectedRows[0];
-      const newKey = newSelectedKeys[0] ? [newSelectedKeys[0]] : [];
-      setSelectedRowKeys(newKey);
-      setSelectedUsuario(selectedRow || null);
-
-      if (selectedRow) {
-        editForm.setFieldsValue({
-          username: selectedRow.username,
-          email: selectedRow.email,
-          role: selectedRow.role,
-          password: "", // vacío por seguridad
-        });
-      }
-    },
-  };
 
   // Ribbon
   const ribbonActions = (
@@ -194,7 +169,7 @@ const Usuarios = () => {
             <Button
               type="primary"
               icon={<PlusOutlined />}
-              onClick={() => setModalVisible(true)}
+              onClick={openCreateModal}
             >
               Añadir
             </Button>
@@ -203,7 +178,7 @@ const Usuarios = () => {
             <Button
               icon={<EditOutlined />}
               disabled={!selectedUsuario}
-              onClick={() => setModalEditVisible(true)}
+              onClick={openEditModal}
             >
               Editar
             </Button>
@@ -286,23 +261,25 @@ const Usuarios = () => {
           loading={loading}
           rowKey="id"
           pagination={{ pageSize: 10 }}
-          rowSelection={rowSelection}
+          onRow={(record) => ({
+          onClick: () => setSelectedUsuario(record),
+        })}
+        rowClassName={(record) => (selectedUsuario?.id === record.id ? "ant-table-row-selected" : "")}
           style={{ background: "white", borderRadius: 4 }}
         />
       </div>
-
-      {/* Modal crear */}
       <Modal
-        title="Añadir Usuario"
+        title={editMode ? "Editar Usuario" : "Añadir Usuario"}
         open={modalVisible}
         onCancel={() => {
           setModalVisible(false);
           form.resetFields();
+          setSelectedUsuario(null);
         }}
         onOk={() => form.submit()}
         destroyOnClose
       >
-        <Form form={form} onFinish={onCreate} layout="vertical">
+        <Form form={form} onFinish={onFinish} layout="vertical">
           <Form.Item
             name="username"
             label="Usuario"
@@ -322,59 +299,8 @@ const Usuarios = () => {
           </Form.Item>
           <Form.Item
             name="password"
-            label="Contraseña"
+            label={editMode ? "Nueva contraseña" : "Contraseña"}
             rules={[{ required: true, message: "Ingrese la contraseña" }]}
-          >
-            <Input.Password />
-          </Form.Item>
-          <Form.Item
-            name="role"
-            label="Rol"
-            rules={[{ required: true, message: "Seleccione un rol" }]}
-          >
-            <Select placeholder="Seleccione un rol">
-              <Select.Option value="admin">Administrador</Select.Option>
-              <Select.Option value="facturacion">Facturación</Select.Option>
-              <Select.Option value="ventas">Ventas</Select.Option>
-              <Select.Option value="contabilidad">Contabilidad</Select.Option>
-            </Select>
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* Modal editar */}
-      <Modal
-        title="Editar Usuario"
-        open={modalEditVisible}
-        onCancel={() => {
-          setModalEditVisible(false);
-          editForm.resetFields();
-        }}
-        onOk={() => editForm.submit()}
-        destroyOnClose
-      >
-        <Form form={editForm} onFinish={onEdit} layout="vertical">
-          <Form.Item
-            name="username"
-            label="Usuario"
-            rules={[{ required: true, message: "Ingrese el nombre de usuario" }]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name="email"
-            label="Email"
-            rules={[
-              { required: true, message: "Ingrese el correo electrónico" },
-              { type: "email", message: "Correo no válido" },
-            ]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name="password"
-            label="Nueva contraseña"
-            rules={[{ required: true, message: "Ingrese una nueva contraseña" }]}
           >
             <Input.Password />
           </Form.Item>

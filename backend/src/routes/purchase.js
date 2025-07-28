@@ -37,7 +37,12 @@ router.get('/admin', async (req, res) => {
 
 // Registrar una compra (factura de compra) con múltiples productos
 router.post('/', async (req, res) => {
-  const { supplierId, productos } = req.body; // productos: [{ productoId, cantidad, price }]
+  const { supplierId, productos, storeId, cajaId } = req.body; 
+
+  if (!storeId || !cajaId) {
+    return res.status(400).json({ error: "Faltan storeId o cajaId" });
+  }
+
   try {
     if (!Array.isArray(productos) || productos.length === 0) {
       return res.status(400).json({ error: 'La compra debe tener al menos un producto' });
@@ -58,8 +63,14 @@ router.post('/', async (req, res) => {
     const purchase = await prisma.purchase.create({
       data: {
         folio,
-        supplierId: supplierId,
+        supplier: {connect: { id: supplierId }},
         total: total,
+        caja: {
+          connect: { id: cajaId }
+        },
+        store: {
+          connect: { id: storeId }
+        },
         items: {
           create: productos.map(item => ({
             productId: item.productoId,
