@@ -7,12 +7,16 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from 'react-router-dom';
 import ClienteForm from "../components/ClienteForm";
+import { useSearchParams } from "react-router-dom";
+import axios from "axios";
 
 const { Header, Content } = Layout;
 const { Title, Text } = Typography;
 
 const Ventas = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const idVenta = searchParams.get("id");
   const [clientes, setClientes] = useState([]);
   const [productos, setProductos] = useState([]);
   const [carrito, setCarrito] = useState([]);
@@ -26,7 +30,10 @@ const Ventas = () => {
   const [tiendasDisponibles, setTiendasDisponibles] = useState([]);
   const [tiendaSeleccionada, setTiendaSeleccionada] = useState(null);
   const [mostradorSeleccionado, setMostradorSeleccionado] = useState(null);
-
+  const [ventaCargadaDesdeId, setVentaCargadaDesdeId] = useState(false);
+  const [metodoSeleccionado, setMetodoSeleccionado] = useState(null);
+  const [valorIngreso, setValorIngreso] = useState(0);
+  const esEdicion = Boolean(idVenta); // Si hay id, es edición
 
     // Función para obtener el próximo folio desde backend
   const fetchFolio = async () => {
@@ -38,7 +45,25 @@ const Ventas = () => {
       setFolio("ERROR");
     }
   };
+
+  useEffect(() => {
+    if (!esEdicion) {
+      fetchFolio();
+    }
+  }, []);
   
+  useEffect(() => {
+    if (esEdicion) {
+      axios.get(`/api/ventas/${idVenta}`).then(({ data }) => {
+        setFolio(data.folio);
+        setClientes(data.cliente);
+        setProductos(data.detalles);
+        setPagosRecibidos(data.pagos);
+      });
+    }
+  }, []);
+
+
   // Cuando el usuario hace "Nueva venta", también pide un nuevo folio
   const handleNuevaVenta = async () => {
     // Aquí cargas las tiendas disponibles desde el backend (o puedes usar un archivo estático de prueba)
@@ -78,6 +103,50 @@ const Ventas = () => {
   ];
   const [pagosRecibidos, setPagosRecibidos] = useState([]);
 
+  const fetchVenta = async (id) => {
+    try {
+      const res = await fetch("/api/ventas");
+      const data = await res.json();
+      const venta = data.find(v => v.id.toString() === id.toString());
+
+      if (!venta) {
+        message.error("Venta no encontrada");
+        navigate("/ventas/panel");
+        return;
+      }
+
+      setClienteSeleccionado(venta.clienteId);
+      setTiendaSeleccionada(venta.storeId);
+      setMostradorSeleccionado(venta.cajaId);
+
+      const productosVenta = venta.productos.map(p => ({
+        id: p.productoId,
+        name: p.producto,
+        description: "", 
+        price: p.price,
+        cantidad: p.cantidad,
+        total: p.price * p.cantidad,
+        tax: { percent: 0 },
+      }));
+
+      setCarrito(productosVenta);
+      setVentaCargadaDesdeId(true);
+      setFolio(venta.folio); 
+
+      message.success("Venta cargada para edición");
+    } catch (error) {
+      message.error("Error cargando la venta para edición");
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
+    if (idVenta) {
+      fetchVenta(idVenta);
+    }
+  }, [idVenta]);
+
+
   // Cargar clientes y productos
   useEffect(() => {
     const fetchClientes = async () => {
@@ -99,7 +168,6 @@ const Ventas = () => {
     };
     fetchClientes();
     fetchMetodosPago();
-    fetchFolio();
   }, []);
 
     const fetchProductos = async () => {
@@ -131,14 +199,16 @@ const Ventas = () => {
         const res = await fetch("/api/stores");
         const data = await res.json();
         setTiendasDisponibles(data);
-        setModalSeleccionTienda(true); // Siempre mostrar al entrar
+          if (!idVenta) {
+            setModalSeleccionTienda(true);
+          }
       } catch {
         message.error("No se pudieron cargar las tiendas");
       }
     };
 
     mostrarModalSeleccion();
-  }, []);
+  }, [idVenta]);
 
   // Agregar producto al carrito
   const agregarProducto = (id) => {
@@ -189,27 +259,36 @@ const Ventas = () => {
       message.warning("Agrega productos al carrito");
       return;
     }
+
     setLoading(true);
     try {
-      await fetch("/api/ventas", {
-        method: "POST",
+      const method = idVenta ? "PUT" : "POST";
+      const url = idVenta ? `/api/ventas/${idVenta}` : "/api/ventas";
+
+      await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          clienteId:  clienteSeleccionado,
+          clienteId: clienteSeleccionado,
           storeId: tiendaSeleccionada,
-          cajaId: mostradorSeleccionado, 
+          cajaId: mostradorSeleccionado,
           importeRecibido,
           cambio,
           formasPago: pagosRecibidos,
-          productos: carrito.map(({ id, cantidad }) => ({ 
+          productos: carrito.map(({ id, cantidad }) => ({
             productoId: id,
             cantidad,
-          })),
+          }))
         }),
       });
-      message.success(`Venta registrada. Cambio: L. ${cambio}`);
+
+      message.success(idVenta ? "Venta actualizada correctamente" : `Venta registrada. Cambio: L. ${cambio}`);
       setCarrito([]);
       setPagosRecibidos([]);
+      if (idVenta) {
+        navigate("/ventas/panel");
+      }
+
     } catch {
       message.error("No se pudo registrar la venta");
     }
@@ -331,13 +410,18 @@ const Ventas = () => {
       bordered
       style={{ marginBottom: 8 }}
       rowKey="key"
-        onRow={record => ({
-          onClick: () => {
-            setPagosRecibidos([{ metodo: record.descripcion, importe: totalVenta }]); // o mostrar modal para capturar importe
-            setModalPanelPago(false);
-            setTimeout(() => setModalRecibido(true), 250);
+      onRow={record => ({
+        onClick: () => {
+          const totalRecibido = pagosRecibidos.reduce((acc, p) => acc + p.importe, 0);
+          if (totalRecibido >= totalVenta) {
+            message.warning("Ya se ha recibido el monto total de la venta");
+            return;
           }
-        })}
+          setMetodoSeleccionado(record.descripcion); // Para saber qué método se eligió
+          setModalPanelPago(false);
+          setTimeout(() => setModalRecibido(true), 250);
+        }
+      })}
     />
     <Card
       type="inner"
@@ -390,7 +474,7 @@ const Ventas = () => {
       <Button onClick={() => { setPagosRecibidos([]); setModalPanelPago(false); }}>Cancelar</Button>
       <Button
         type="primary"
-        disabled={pagosRecibidos.length === 0}
+        disabled={pagosRecibidos.reduce((acc, p) => acc + p.importe, 0) < totalVenta}
         onClick={handleConfirmarPago}
       >
         Confirmar
@@ -484,12 +568,12 @@ const Ventas = () => {
             }
 
             fetchFolio(); // Obtener folio para la venta
-
-            // Aquí llamamos a fetchProductos con la tienda seleccionada
             fetchProductos(tiendaSeleccionada);
 
-            setCarrito([]);
-            setPagosRecibidos([]);
+            if (!ventaCargadaDesdeId) {
+              setCarrito([]);
+              setPagosRecibidos([]);
+            }
             setModalSeleccionTienda(false);
             message.success(`Tienda ${tiendaSeleccionada} / Mostrador ${mostradorSeleccionado} seleccionado`);
           }}
@@ -549,10 +633,42 @@ const Ventas = () => {
       <Modal
         open={modalRecibido}
         footer={null}
-        onCancel={() => setModalRecibido(false)}
+        onCancel={() => {
+          setModalRecibido(false);
+          setValorIngreso(0);
+          setMetodoSeleccionado(null);
+        }}
         centered
         destroyOnClose
       >
+        <div style={{ padding: 16 }}>
+          <Title level={5}>Monto recibido</Title>
+          <InputNumber
+            style={{ width: "100%", marginBottom: 16 }}
+            min={1}
+            step={1}
+            addonBefore="L."
+            placeholder="Ingresa el monto"
+            onChange={(value) => {
+              if (isNaN(value)) return;
+              setValorIngreso(Number(value));
+            }}
+          />
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+            <Button onClick={() => setModalRecibido(false)}>Cancelar</Button>
+            <Button
+              type="primary"
+              disabled={valorIngreso <= 0 || !metodoSeleccionado}
+              onClick={() => {
+                setPagosRecibidos(prev => [...prev, { metodo: metodoSeleccionado, importe: valorIngreso }]);
+                setModalRecibido(false);
+                setTimeout(() => setModalPanelPago(true), 250);
+              }}
+            >
+              Aceptar
+            </Button>
+          </div>
+        </div>
       </Modal>
     </Layout>
   );

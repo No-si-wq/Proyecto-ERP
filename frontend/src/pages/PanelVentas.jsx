@@ -4,9 +4,6 @@ import {
   ReloadOutlined,
   HomeOutlined,
   StopOutlined, // Importa el ícono
-  FileAddOutlined,
-  UserOutlined,
-  ToolOutlined
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 
@@ -15,7 +12,10 @@ const { Title } = Typography;
 const PanelVentas = () => {
   const [ventas, setVentas] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [selectedRowKeys, setSelectedRowKeys] = useState([]); // Para selección
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+  const [selectedRows, setSelectedRows] = useState([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const navigate = useNavigate();
 
   const fetchVentas = async () => {
@@ -23,8 +23,9 @@ const PanelVentas = () => {
     try {
       const res = await fetch("/api/ventas/admin");
       if (!res.ok) throw new Error("Error consultando ventas");
-      const data = await res.json();
-      setVentas(data);
+        const data = await res.json();
+        setVentas(data.ventas || data);
+        setTotal(data.total || data.length);
     } catch (e) {
       message.error("No se pudieron cargar las ventas", e.message);
     }
@@ -38,17 +39,31 @@ const PanelVentas = () => {
   // Cancelar venta seleccionada
   const cancelarVenta = async () => {
     if (selectedRowKeys.length === 0) return;
-    const id = selectedRowKeys[0];
+    const venta = selectedRows[0];
     try {
-      const res = await fetch(`/api/ventas/${id}/cancel`, { method: "PATCH" });
+      const res = await fetch(`/api/ventas/${venta.id}/cancel`, { method: "PATCH" });
       if (!res.ok) throw new Error("Error al cancelar la venta");
       message.success("Venta cancelada");
-      setSelectedRowKeys([]); // Limpia selección
+      setSelectedRowKeys([]); 
+      setSelectedRows([]);
       fetchVentas();
     } catch (e) {
       message.error("No se pudo cancelar la venta", e.message);
     }
   };
+
+  const rowSelection = {
+  type: 'radio', // o 'checkbox' si quieres selección múltiple
+    selectedRowKeys,
+    onChange: (keys, rows) => {
+      setSelectedRowKeys(keys);
+      setSelectedRows(rows);
+    },
+    getCheckboxProps: record => ({
+      disabled: record.estado === "CANCELADA"
+    }),
+  };
+
 
   const columns = [
     {
@@ -73,7 +88,7 @@ const PanelVentas = () => {
       title: "Total",
       dataIndex: "total",
       key: "total",
-      render: (total) => `$${Number(total).toFixed(2)}`,
+      render: (total) => `L. ${Number(total).toFixed(2)}`,
     },
     {
       title: "Estado",
@@ -111,16 +126,23 @@ const PanelVentas = () => {
         onConfirm={cancelarVenta}
         okText="Sí, cancelar"
         cancelText="No"
-        disabled={selectedRowKeys.length === 0}
       >
         <Button
           danger
           icon={<StopOutlined />}
-          disabled={selectedRowKeys.length === 0}
+          disabled={selectedRows.length === 0}
         >
           Cancelar
         </Button>
       </Popconfirm>
+
+      <Button
+        type="primary"
+        onClick={() => navigate(`/ventas?id=${selectedRows[0]?.id}`)}
+        disabled={selectedRows.length === 0}
+      >
+        Editar
+      </Button>
     </Space>
   );
 
@@ -155,27 +177,10 @@ const PanelVentas = () => {
         columns={columns}
         rowKey="id"
         loading={loading}
-        pagination={{ pageSize: 10 }}
+        pagination={{ current: page, pageSize: 10, total, onChange: setPage }}
         bordered
         scroll={{ x: true }}
-        rowSelection={{
-          type: 'checkbox',
-          selectedRowKeys,
-          onChange: (keys, selectedRows) => {
-            const selectedKey = keys[0];
-
-            if (selectedRowKeys[0] === selectedKey) {
-              // Deselecciona si se vuelve a hacer clic sobre la misma fila
-              setSelectedRowKeys([]);
-            } else {
-              // Solo una fila seleccionada a la vez
-              setSelectedRowKeys(selectedKey ? [selectedKey] : []);
-            }
-          },
-          getCheckboxProps: record => ({
-            disabled: record.estado === "CANCELADA"
-          })
-        }}
+        rowSelection={rowSelection}
       />
     </div>
   );

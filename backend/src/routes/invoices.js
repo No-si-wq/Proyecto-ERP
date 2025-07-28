@@ -148,38 +148,111 @@ router.post('/', async (req, res) => {
 });
 
 // Obtener todas las ventas (con todos los productos)
-router.get('/', async (req, res) => {
-  try {
-    const invoices = await prisma.invoice.findMany({
-      include: {
-        client: true,
-        items: {
-          include: {
-            product: true,
+  router.get('/', async (req, res) => {
+    try {
+      const invoices = await prisma.invoice.findMany({
+        include: {
+          client: true,
+          items: {
+            include: {
+              product: true,
+            },
           },
         },
-      },
-      orderBy: { id: 'desc' },
-    });
+        orderBy: { id: 'desc' },
+      });
 
-    // Ahora incluye el folio en la respuesta
+      // Ahora incluye el folio en la respuesta
     const ventas = invoices.map(inv => ({
       id: inv.id,
       folio: inv.folio,
       cliente: inv.client.name,
+      clienteId: inv.client.id,
       productos: inv.items.map(item => ({
+        productoId: item.product.id,
         producto: item.product.name,
         price: item.price,
         cantidad: item.quantity,
         subtotal: item.subtotal,
       })),
       total: inv.total,
+      storeId: inv.storeId,
+      cajaId: inv.cajaId,
     }));
 
     res.json(ventas);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al obtener las ventas' });
+  }
+});
+
+router.put('/:id', async (req, res) => {
+  const { id } = req.params;
+  const { clienteId, productos, importeRecibido, cambio, formasPago, storeId, cajaId } = req.body;
+
+  try {
+    // Elimina los items actuales (simplificado)
+    await prisma.invoiceItem.deleteMany({ where: { invoiceId: parseInt(id) } });
+
+    // Recalcula totales
+    let total = 0;
+    const productosData = [];
+
+    for (const p of productos) {
+      const prod = await prisma.product.findUnique({ where: { id: p.productoId } });
+      if (!prod) return res.status(400).json({ error: `Producto ${p.productoId} no existe` });
+      const subtotal = p.cantidad * prod.price;
+      total += subtotal;
+
+      productosData.push({
+        productId: p.productoId,
+        quantity: p.cantidad,
+        price: prod.price,
+        subtotal
+      });
+    }
+
+    const updatedInvoice = await prisma.invoice.update({
+      where: { id: parseInt(id) },
+      data: {
+        clientId: clienteId,
+        storeId,
+        cajaId,
+        total,
+        importeRecibido,
+        cambio,
+        formasPago: formasPago ? JSON.stringify(formasPago) : undefined,
+        items: {
+          create: productosData
+        }
+      },
+      include: {
+        client: true,
+        items: {
+          include: { product: true }
+        }
+      }
+    });
+
+    res.json({
+      id: updatedInvoice.id,
+      folio: updatedInvoice.folio,
+      cliente: updatedInvoice.client.name,
+      items: updatedInvoice.items.map(item => ({
+        producto: item.product.name,
+        price: item.price,
+        cantidad: item.quantity,
+        subtotal: item.subtotal
+      })),
+      total: updatedInvoice.total,
+      importeRecibido: updatedInvoice.importeRecibido,
+      cambio: updatedInvoice.cambio,
+      formasPago: updatedInvoice.formasPago ? JSON.parse(updatedInvoice.formasPago) : undefined
+    });
+  } catch (err) {
+    console.error("Error al actualizar la venta:", err);
+    res.status(500).json({ error: "Error al actualizar la venta" });
   }
 });
 

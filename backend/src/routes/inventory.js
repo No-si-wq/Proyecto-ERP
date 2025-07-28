@@ -11,7 +11,6 @@ const validateNumericId = (id) => {
 
 router.get('/by-store/:storeId', async (req, res) => {
   const storeId = validateNumericId(req.params.storeId);
-  console.log("Store ID recibido:", storeId);
   if (!storeId) return res.status(400).json({ error: 'storeId inválido' });
 
   try {

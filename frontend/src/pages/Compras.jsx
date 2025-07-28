@@ -8,6 +8,8 @@ import {
 import { useNavigate } from 'react-router-dom';
 import ProveedorForm from "../components/ProveedorForm";
 import RecibidoEfectivoCard from "../components/RecibidoEfectivoCard";
+import { useSearchParams } from "react-router-dom";
+import axios from "axios";
 
 const { Header, Content } = Layout;
 const { Title, Text } = Typography;
@@ -16,6 +18,8 @@ const Compras = () => {
   const navigate = useNavigate();
   const [proveedores, setProveedores] = useState([]);
   const [productos, setProductos] = useState([]);
+  const [searchParams] = useSearchParams();
+  const idCompra = searchParams.get("id");
   const [carrito, setCarrito] = useState([]);
   const [proveedorSeleccionado, setProveedorSeleccionado] = useState(null);
   const [modalProveedor, setModalProveedor] = useState(false);
@@ -28,22 +32,86 @@ const Compras = () => {
   const [tiendaSeleccionada, setTiendaSeleccionada] = useState(null);
   const [mostradorSeleccionado, setMostradorSeleccionado] = useState(null);
   const ventaHabilitada = Boolean(tiendaSeleccionada && mostradorSeleccionado);
+  const [compraCargadaDesdeId, setCompraCargadaDesdeId] = useState(false);
+  const [metodoSeleccionado, setMetodoSeleccionado] = useState(null);
+  const [valorIngreso, setValorIngreso] = useState(0);
+  const esEdicion = Boolean(idCompra);
 
   // Nuevos estados para el flujo de pago
   const [modalPanelConfirmar, setModalPanelConfirmar] = useState(false);
   const [modalRecibido, setModalRecibido] = useState(false);
   const [pagosRecibidos, setPagosRecibidos] = useState([]);
 
-  // Función para obtener el próximo folio desde backend
-  const fetchFolio = async () => {
+   const fetchCompra = async (id) => {
       try {
-        const res = await fetch("/api/compras/next-folio");
+        const res = await fetch("/api/compras");
         const data = await res.json();
-        setFolio(data.folio);
-      } catch {
-        setFolio("ERROR");
+        const compra = data.find(v => v.id.toString() === id.toString());
+  
+        if (!compra) {
+          message.error("compra no encontrada");
+          navigate("/compras/facturas");
+          return;
+        }
+  
+        setProveedorSeleccionado(compra.supplierId);
+        setTiendaSeleccionada(compra.storeId);
+        setMostradorSeleccionado(compra.cajaId);
+  
+        const productosCompra = compra.productos.map(p => ({
+          id: p.productoId,
+          name: p.producto,
+          description: "", 
+          price: p.price,
+          cantidad: p.cantidad,
+          total: p.price * p.cantidad,
+          tax: { percent: 0 },
+        }));
+  
+        setCarrito(productosCompra);
+        setCompraCargadaDesdeId(true);
+        setFolio(compra.folio); 
+  
+        message.success("Compra cargada para edición");
+      } catch (error) {
+        message.error("Error cargando la compra para edición");
+        console.error(error);
       }
     };
+
+    useEffect(() => {
+      if (idCompra) {
+        fetchCompra(idCompra);
+      }
+    }, [idCompra]);
+
+  // Función para obtener el próximo folio desde backend
+  const fetchFolio = async () => {
+    try {
+      const res = await fetch("/api/compras/next-folio");
+      const data = await res.json();
+      setFolio(data.folio);
+    } catch {
+      setFolio("ERROR");
+    }
+  };
+
+  useEffect(() => {
+    if (!esEdicion) {
+      fetchFolio();
+    }
+  }, []);
+
+    useEffect(() => {
+    if (esEdicion) {
+      axios.get(`/api/compras/${idCompra}`).then(({ data }) => {
+        setFolio(data.folio);
+        setProveedores(data.proveedor);
+        setProductos(data.detalles);
+        setPagosRecibidos(data.pagos);
+      });
+    }
+  }, []);
 
   // Cargar proveedores y productos
   useEffect(() => {
@@ -65,7 +133,6 @@ const Compras = () => {
       }
     };
     fetchMetodosPago();
-    fetchFolio();
     fetchProveedores();
   }, []);
 
@@ -75,14 +142,16 @@ const Compras = () => {
         const res = await fetch("/api/stores");
         const data = await res.json();
         setTiendasDisponibles(data);
-        setModalSeleccionTienda(true); // Siempre mostrar al entrar
+          if (!idCompra) {
+            setModalSeleccionTienda(true);
+          }
       } catch {
         message.error("No se pudieron cargar las tiendas");
       }
     };
 
     mostrarModalSeleccion();
-  }, []);
+  }, [idCompra]);
 
     const fetchProductos = async () => {
     if (!tiendaSeleccionada) {
@@ -118,7 +187,7 @@ const Compras = () => {
     }
   };
 
-  // Cambiar cantidad de un producto en el carrito
+  // Cambiar cantidad de un producto en el carrito 
   const cambiarCantidad = (id, cantidad) => {
     setCarrito(carrito.map(item => item.id === id ? { ...item, cantidad, total: cantidad * item.price } : item));
   };
@@ -174,7 +243,7 @@ const Compras = () => {
           storeId: tiendaSeleccionada,
           cajaId: mostradorSeleccionado, 
           productos: carrito.map(({ id, cantidad, price }) => ({ productoId: id, cantidad, price })),
-          pagos: pagosRecibidos, // puedes guardar pagos si tu backend lo soporta
+          pagos: pagosRecibidos,
         }),
       });
       message.success("Compra registrada");
@@ -295,14 +364,6 @@ const Compras = () => {
     </Space>
   );
 
-  // ----------- PAGO EFECTIVO Y CONFIRMACIÓN -----------
-
-  // Al recibir el importe, agrega el pago y muestra el resumen
-  const handleAceptarImporte = (importe) => {
-    setPagosRecibidos([{ metodo: "Efectivo", importe }]);
-    setModalRecibido(false);
-    setTimeout(() => setModalPanelConfirmar(true), 250);
-  };
 
   // Columnas para la tabla de formas de pago (demo)
   const formasPago = metodosPago.map(mp => ({
@@ -474,12 +535,13 @@ const Compras = () => {
           }
 
           fetchFolio(); // Obtener folio para la venta
-
-          // Aquí llamamos a fetchProductos con la tienda seleccionada
           fetchProductos(tiendaSeleccionada);
 
-          setCarrito([]);
-          setPagosRecibidos([]);
+          if(!compraCargadaDesdeId){
+            setCarrito([]);
+            setPagosRecibidos([]);
+          }
+
           setModalSeleccionTienda(false);
           message.success(`Tienda ${tiendaSeleccionada} / Mostrador ${mostradorSeleccionado} seleccionado`);
         }}
@@ -537,15 +599,42 @@ const Compras = () => {
       <Modal
         open={modalRecibido}
         footer={null}
-        onCancel={() => setModalRecibido(false)}
+        onCancel={() => {
+          setModalRecibido(false);
+          setValorIngreso(0);
+          setMetodoSeleccionado(null);
+        }}
         centered
         destroyOnClose
       >
-        <RecibidoEfectivoCard
-          total={totalCompra}
-          onCancel={() => setModalRecibido(false)}
-          onAceptar={handleAceptarImporte}
-        />
+        <div style={{ padding: 16 }}>
+          <Title level={5}>Monto recibido</Title>
+          <InputNumber
+            style={{ width: "100%", marginBottom: 16 }}
+            min={1}
+            step={1}
+            addonBefore="L."
+            placeholder="Ingresa el monto"
+            onChange={(value) => {
+              if (isNaN(value)) return;
+              setValorIngreso(Number(value));
+            }}
+          />
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+            <Button onClick={() => setModalRecibido(false)}>Cancelar</Button>
+            <Button
+              type="primary"
+              disabled={valorIngreso <= 0 || !metodoSeleccionado}
+              onClick={() => {
+                setPagosRecibidos(prev => [...prev, { metodo: metodoSeleccionado, importe: valorIngreso }]);
+                setModalRecibido(false);
+                setTimeout(() => setModalPanelConfirmar(true), 250);
+              }}
+            >
+              Aceptar
+            </Button>
+          </div>
+        </div>
       </Modal>
     </Layout>
   );

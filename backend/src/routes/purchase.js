@@ -35,6 +35,46 @@ router.get('/admin', async (req, res) => {
   }
 });
 
+router.get('/purchases', async (req, res) => {
+  try {
+    const purchases = await prisma.purchase.findMany({
+      include: {
+        supplier: true,
+        items: {
+          include: {
+            product: true,
+          },
+        },
+      },
+      orderBy: { id: 'desc' },
+    });
+
+    const resultado = purchases.map(purchase => ({
+      id: purchase.id,
+      folio: purchase.folio,
+      proveedor: purchase.supplier.name,
+      proveedorId: purchase.supplier.id,
+      productos: purchase.items.map(item => ({
+        productoId: item.product.id,
+        producto: item.product.name,
+        price: item.price,
+        cantidad: item.quantity,
+        subtotal: item.subtotal,
+      })),
+      total: purchase.total,
+      storeId: purchase.storeId,
+      cajaId: purchase.cajaId,
+      estado: purchase.estado,
+      fecha: purchase.createdAt,
+    }));
+
+    res.json(resultado);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al obtener las compras' });
+  }
+});
+
 // Registrar una compra (factura de compra) con múltiples productos
 router.post('/', async (req, res) => {
   const { supplierId, productos, storeId, cajaId } = req.body; 

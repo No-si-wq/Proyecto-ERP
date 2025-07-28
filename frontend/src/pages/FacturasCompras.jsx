@@ -8,16 +8,33 @@ const { Title } = Typography;
 const FacturasCompras = () => {
   const [compras, setCompras] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [selectedRowKeys, setSelectedRowKeys] = useState([]); // Para la selección
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+  const [selectedRows, setSelectedRows] = useState([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const navigate = useNavigate();
+
+  const rowSelection = {
+    type: 'radio', // o 'checkbox' si quieres selección múltiple
+    selectedRowKeys,
+    onChange: (keys, rows) => {
+      setSelectedRowKeys(keys);
+      setSelectedRows(rows);
+    },
+    getCheckboxProps: record => ({
+      disabled: record.estado === "CANCELADA"
+    }),
+  };
+
 
   const fetchCompras = async () => {
     setLoading(true);
     try {
       const res = await fetch("/api/compras/admin");
       if (!res.ok) throw new Error("Error consultando compras");
-      const data = await res.json();
-      setCompras(data);
+        const data = await res.json();
+        setCompras(data.ventas || data);
+        setTotal(data.total || data.length);
     } catch (e) {
       message.error("No se pudieron cargar las compras", e.message);
     }
@@ -31,12 +48,13 @@ const FacturasCompras = () => {
   // Cancelar compra seleccionada
   const cancelarCompra = async () => {
     if (selectedRowKeys.length === 0) return;
-    const id = selectedRowKeys[0];
+    const compra = selectedRows[0];
     try {
-      const res = await fetch(`/api/compras/${id}/cancel`, { method: "PATCH" });
+      const res = await fetch(`/api/compras/${compra.id}/cancel`, { method: "PATCH" });
       if (!res.ok) throw new Error("Error al cancelar la compra");
       message.success("Compra cancelada");
-      setSelectedRowKeys([]); // Limpia selección
+      setSelectedRowKeys([]); 
+      setSelectedRows([]);
       fetchCompras();
     } catch (e) {
       message.error("No se pudo cancelar la compra", e.message);
@@ -102,16 +120,22 @@ const FacturasCompras = () => {
         onConfirm={cancelarCompra}
         okText="Sí, cancelar"
         cancelText="No"
-        disabled={selectedRowKeys.length === 0}
       >
         <Button
           danger
           icon={<StopOutlined />}
-          disabled={selectedRowKeys.length === 0}
+          disabled={selectedRows.length === 0}
         >
           Cancelar
         </Button>
       </Popconfirm>
+      <Button
+        type="primary"
+        onClick={() => navigate(`/ventas?id=${selectedRows[0]?.id}`)}
+        disabled={selectedRows.length === 0}
+      >
+        Editar
+      </Button>
     </Space>
   );
 
@@ -146,27 +170,10 @@ const FacturasCompras = () => {
         columns={columns}
         rowKey="id"
         loading={loading}
-        pagination={{ pageSize: 10 }}
+        pagination={{ current: page, pageSize: 10, total, onChange: setPage }}
         bordered
         scroll={{ x: true }}
-        rowSelection={{
-          type: 'checkbox',
-          selectedRowKeys,
-          onChange: (keys, selectedRows) => {
-            const selectedKey = keys[0];
-
-            if (selectedRowKeys[0] === selectedKey) {
-              // Deselecciona si se vuelve a hacer clic sobre la misma fila
-              setSelectedRowKeys([]);
-            } else {
-              // Solo una fila seleccionada a la vez
-              setSelectedRowKeys(selectedKey ? [selectedKey] : []);
-            }
-          },
-          getCheckboxProps: record => ({
-            disabled: record.estado === "CANCELADA"
-          })
-        }}
+        rowSelection={rowSelection}
       />
     </div>
   );
