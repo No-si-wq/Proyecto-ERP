@@ -1,9 +1,10 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
-// Exporta una función que recibe el pool de PostgreSQL
-module.exports = (pool) => {
+module.exports = () => {
   const router = express.Router();
 
   // Validar token
@@ -16,7 +17,7 @@ module.exports = (pool) => {
 
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      res.json({ valid: true, userId: decoded.userId, username: decoded.username });
+      res.json({ valid: true, userId: decoded.userId, username: decoded.username, role: decoded.role });
     } catch (err) {
       res.status(401).json({ valid: false, message: 'Token inválido o expirado' });
     }
@@ -36,24 +37,29 @@ module.exports = (pool) => {
     }
 
     try {
-      // Verifica si el usuario o correo ya existe
-      const userExists = await pool.query(
-        'SELECT 1 FROM "User" WHERE email = $1 OR username = $2',
-        [email, username]
-      );
-      if (userExists.rows.length > 0) {
+      const emailExists = await prisma.user.findUnique({
+        where: { email }
+      });
+
+      const usernameExists = await prisma.user.findFirst({
+        where: { username }
+      });
+
+      if (emailExists || usernameExists) {
         return res.status(400).json({ message: 'El usuario o correo ya existe' });
       }
 
-      // Hashea la contraseña
       const hashedPassword = await bcrypt.hash(password, 10);
-      const createdAt = new Date();
 
-      // Inserta el usuario
-      await pool.query(
-        'INSERT INTO "User" (email, password, role, "createdAt", username) VALUES ($1, $2, $3, $4, $5)',
-        [email, hashedPassword, role, createdAt, username]
-      );
+      await prisma.user.create({
+        data: {
+          email,
+          username,
+          password: hashedPassword,
+          role,
+          createdAt: new Date()
+        }
+      });
 
       res.status(201).json({ message: 'Usuario registrado exitosamente' });
     } catch (err) {
@@ -65,28 +71,44 @@ module.exports = (pool) => {
   // Login
   router.post('/login', async (req, res) => {
     const { username, password } = req.body;
+
     try {
-      const result = await pool.query(
-        'SELECT * FROM "User" WHERE username = $1',
-        [username]
-      );
-      if (result.rows.length === 0) {
-        return res.status(401).json({ message: 'Usuario o contraseña incorrectos' });
-      }
-      const user = result.rows[0];
-
-      // Compara la contraseña
-      const passwordsMatch = await bcrypt.compare(password, user.password);
-      if (!passwordsMatch) {
-        return res.status(401).json({ message: 'Usuario o contraseña incorrectos' });
-      }
-
-      // Genera un token JWT
-      const token = jwt.sign({ userId: user.id, username: user.username }, process.env.JWT_SECRET, {
-        expiresIn: '1h',
+      const users = await prisma.user.findMany({
+        where: { username },
+        orderBy: { createdAt: 'asc' } // opcional: usa el más reciente
       });
 
-      res.json({ token, username: user.username });
+      if (users.length === 0) {
+        return res.status(401).json({ message: 'Usuario o contraseña incorrectos' });
+      }
+
+      // Recorremos los posibles usuarios
+      let validUser = null;
+      for (const u of users) {
+        const match = await bcrypt.compare(password, u.password);
+        if (match) {
+          validUser = u;
+          break;
+        }
+      }
+
+      if (!validUser) {
+        return res.status(401).json({ message: 'Usuario o contraseña incorrectos' });
+      }
+
+    const token = jwt.sign(
+      {
+        userId: validUser.id,
+        username: validUser.username,
+        role: validUser.role 
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    // Además, puedes devolver también el rol al frontend
+    res.json({
+      token, username: validUser.username, role: validUser.role});
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: 'Error al iniciar sesión' });

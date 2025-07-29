@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Table, Button, Modal, Form, Input, Popconfirm, message, Tabs, Select } from 'antd';
 import { PlusOutlined, DeleteOutlined, HomeOutlined, EditOutlined, ReloadOutlined } from "@ant-design/icons";
 import { useNavigate } from 'react-router-dom';
+import { usePermissions } from '../hooks/Permisos';
 
 const { TabPane } = Tabs;
 const { Option } = Select;
@@ -16,6 +17,7 @@ export default function PaymentMethods() {
   const [form] = Form.useForm();
   const [page, setPage] = useState(1);
   const [currencies, setCurrencies] = useState([]);
+  const { canDeletepaymentMethods } = usePermissions();
   const navigate = useNavigate();
 
   // Cargar datos cuando cambia la página
@@ -161,7 +163,9 @@ export default function PaymentMethods() {
         </Button>
         <Button icon={<EditOutlined />} onClick={onEdit} style={{ marginRight: 8 }} disabled={!current}>Editar</Button>
         <Popconfirm title="¿Seguro que deseas eliminar?" onConfirm={onDelete}>
-          <Button icon={<DeleteOutlined />} danger style={{ marginRight: 8 }} disabled={!current}>Eliminar</Button>
+          <Button icon={<DeleteOutlined />} danger style={{ marginRight: 8 }} 
+          disabled={!current} hidden={!canDeletepaymentMethods}>
+            Eliminar</Button>
         </Popconfirm>
         <Button icon={<ReloadOutlined />} onClick={() => fetchData(page)}>Actualizar</Button>
       </div>

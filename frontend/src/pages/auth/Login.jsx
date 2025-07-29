@@ -46,7 +46,10 @@ const Login = () => {
       if (response.ok) {
         const data = await response.json();
         localStorage.setItem('token', data.token);
-        setAuth({ user: data.username, token: data.token });
+        localStorage.setItem('role', data.role); 
+
+        setAuth({ user: data.username, token: data.token, role: data.role, });
+
         localStorage.setItem('auth', 'true');
         navigate('/home');
       } else {

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Table, Button, Modal, Form, Input, Popconfirm, message, Tabs } from 'antd';
 import { PlusOutlined, DeleteOutlined, HomeOutlined, EditOutlined, ReloadOutlined } from "@ant-design/icons";
 import { useNavigate } from 'react-router-dom';
+import { usePermissions } from '../hooks/Permisos';
 
 const { TabPane } = Tabs;
 
@@ -14,6 +15,7 @@ export default function TaxesPage() {
   const [current, setCurrent] = useState(null);
   const [form] = Form.useForm();
   const [page, setPage] = useState(1);
+  const { canDeleteTaxes } = usePermissions();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -159,7 +161,9 @@ const columns = [
         </Button>
         <Button icon={<EditOutlined />} onClick={onEdit} style={{ marginRight: 8 }} disabled={!current}>Editar</Button>
         <Popconfirm title="¿Seguro que deseas eliminar?" onConfirm={onDelete}>
-          <Button icon={<DeleteOutlined />} danger style={{ marginRight: 8 }} disabled={!current}>Eliminar</Button>
+          <Button icon={<DeleteOutlined />} danger style={{ marginRight: 8 }} 
+          disabled={!current} hidden={!canDeleteTaxes}>
+          Eliminar</Button>
         </Popconfirm>
         <Button icon={<ReloadOutlined />} onClick={() => fetchData(page)}>Actualizar</Button>
       </div>

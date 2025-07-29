@@ -14,7 +14,7 @@ router.get('/', async (req, res) => {
         email: true,
         role: true,
         createdAt: true,
-      }
+      }, orderBy: { id: 'asc' },
     });
     res.json(users);
   } catch (err) {
@@ -30,13 +30,13 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    const hashedPassword = await bcrypt.hash(password, 10); // 🔐
+    const hashedPassword = await bcrypt.hash(password, 10); 
 
     const user = await prisma.user.create({
       data: {
         email,
         username,
-        password: hashedPassword, // 🔐 Guardar contraseña hasheada
+        password: hashedPassword,
         role,
       }
     });

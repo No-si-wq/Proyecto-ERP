@@ -23,6 +23,7 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { usePermissions } from "../hooks/Permisos";
 
 const { TabPane } = Tabs;
 
@@ -33,6 +34,7 @@ const Categorias = () => {
   const [selectedCategoria, setSelectedCategoria] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [form] = Form.useForm();
+  const { canDeleteCategorias } = usePermissions();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -144,7 +146,8 @@ const Categorias = () => {
             </Button>
           </Tooltip>
           <Tooltip title="Eliminar categoría">
-            <Button danger icon={<DeleteOutlined />} disabled={!selectedCategoria} onClick={onDelete}>
+            <Button danger icon={<DeleteOutlined />} disabled={!selectedCategoria}
+            hidden={!canDeleteCategorias} onClick={onDelete}>
               Eliminar
             </Button>
           </Tooltip>
