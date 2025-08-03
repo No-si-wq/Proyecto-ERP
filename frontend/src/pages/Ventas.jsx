@@ -549,12 +549,6 @@ const Ventas = () => {
           </div>
         </div>
       </Content>
-      <ClienteForm
-        visible={modalCliente}
-        onCreate={handleCreateCliente}
-        onCancel={() => setModalCliente(false)}
-        confirmLoading={clienteLoading}
-      />
 
         <Modal
           open={modalSeleccionTienda}
