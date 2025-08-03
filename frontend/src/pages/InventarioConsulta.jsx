@@ -7,26 +7,43 @@ import {
   Tooltip,
   Space,
   Tabs,
+  Input,
 } from "antd";
 import {
   ReloadOutlined,
-  FilePdfOutlined,
+  FileExcelOutlined,
   AppstoreOutlined,
   HomeOutlined,
   TeamOutlined,
   SearchOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 import { useNavigate } from "react-router-dom";
 
 const { TabPane } = Tabs;
 
 const InventarioConsulta = () => {
   const navigate = useNavigate();
+  const [busqueda, setBusqueda] = useState("");
   const [productos, setProductos] = useState([]);
+  const [productosFiltrados, setProductosFiltrados] = useState([]);
   const [tiendas, setTiendas] = useState([]);
   const [storeId, setStoreId] = useState(null);
   const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+      const term = busqueda.trim().toLowerCase();
+      setProductosFiltrados(
+        term
+          ? productos.filter(p =>
+              [p.name ]
+                .some(s => s?.toLowerCase().includes(term))
+            )
+          : productos
+      );
+    }, [busqueda, productos]);
 
   // Obtener tiendas al iniciar
   useEffect(() => {
@@ -71,6 +88,28 @@ const InventarioConsulta = () => {
       setLoading(false);
     }
   };
+
+  const exportToExcel = () => {
+    const rows = productosFiltrados.map(p => {
+      const impuesto = p.tax?.percent ? p.price * p.tax.percent : 0;
+      return {
+        Nombre: p.name,
+        SKU: p.sku,
+        Cantidad: p.quantity,
+        Precio: p.price.toFixed(2),
+        Impuesto: p.tax?.percent != null ? `${(p.tax.percent * 100).toFixed(2)}%` : "0%",
+        "Monto Impuesto": impuesto.toFixed(2),
+        "Precio con impuesto": (p.price + impuesto).toFixed(2),
+        Categoría: p.category?.name || "Sin categoría",
+        Tienda: p.store?.name || "Sin tienda",
+      };
+    });
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Inventario");
+      const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      saveAs(new Blob([excelBuffer]), "ConsultaInventario.xlsx");
+    };
 
   const columns = [
     { title: "Nombre", dataIndex: "name", key: "name" },
@@ -141,9 +180,15 @@ const InventarioConsulta = () => {
               Actualizar
             </Button>
           </Tooltip>
-          <Tooltip title="Exportar PDF">
-            <Button icon={<FilePdfOutlined />}>PDF</Button>
-          </Tooltip>
+            <Button onClick={exportToExcel} icon={<FileExcelOutlined />}>Excel</Button>
+            <Input
+              placeholder="Buscar..."
+              prefix={<SearchOutlined />}
+              value={busqueda}
+              onChange={e => setBusqueda(e.target.value)}
+              allowClear
+              style={{ width: 300 }}
+            />
         </Space>
       </TabPane>
       <TabPane
@@ -216,7 +261,7 @@ const InventarioConsulta = () => {
 
         <Table
           columns={columns}
-          dataSource={productos}
+          dataSource={productosFiltrados}
           loading={loading}
           rowKey="id"
           size="middle"
@@ -228,4 +273,5 @@ const InventarioConsulta = () => {
   );
 };
 
+export default InventarioConsulta;
 export default InventarioConsulta;
