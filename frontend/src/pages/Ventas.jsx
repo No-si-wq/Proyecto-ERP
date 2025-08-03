@@ -6,6 +6,7 @@ import {
   PlusOutlined, DeleteOutlined, ShoppingCartOutlined, DollarOutlined, SaveOutlined, ReloadOutlined, UserAddOutlined
 } from "@ant-design/icons";
 import { useNavigate } from 'react-router-dom';
+import ClienteForm from "../components/ClienteForm";
 import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 
@@ -549,6 +550,12 @@ const Ventas = () => {
           </div>
         </div>
       </Content>
+      <ClienteForm
+        visible={modalCliente}
+        onCreate={handleCreateCliente}
+        onCancel={() => setModalCliente(false)}
+        confirmLoading={clienteLoading}
+      />
 
         <Modal
           open={modalSeleccionTienda}
