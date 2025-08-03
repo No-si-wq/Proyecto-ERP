@@ -23,48 +23,58 @@ module.exports = () => {
     }
   });
 
-  // Registro
+// POST /register
   router.post('/register', async (req, res) => {
     const { username, email, password, role } = req.body;
 
+    // Validar campos requeridos
     if (!username || !email || !password || !role) {
       return res.status(400).json({ message: 'Todos los campos son obligatorios' });
     }
 
+    // Validar formato de email simple (puedes usar "validator" si prefieres)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: 'Formato de email no válido' });
+    }
+
+    // Validar rol permitido
     const allowedRoles = ['ventas', 'facturacion', 'admin', 'contabilidad'];
     if (!allowedRoles.includes(role)) {
       return res.status(400).json({ message: 'Rol no válido' });
     }
 
     try {
-      const emailExists = await prisma.user.findUnique({
-        where: { email }
+      // Verificar si ya existe usuario con mismo email o username
+      const existingUser = await prisma.user.findFirst({
+        where: {
+          OR: [{ email }, { username }]
+        }
       });
 
-      const usernameExists = await prisma.user.findFirst({
-        where: { username }
-      });
-
-      if (emailExists || usernameExists) {
+      if (existingUser) {
         return res.status(400).json({ message: 'El usuario o correo ya existe' });
       }
 
+      // Hashear contraseña
       const hashedPassword = await bcrypt.hash(password, 10);
 
+      // Crear nuevo usuario
       await prisma.user.create({
         data: {
           email,
           username,
           password: hashedPassword,
           role,
-          createdAt: new Date()
+          createdAt: new Date(),
         }
       });
 
       res.status(201).json({ message: 'Usuario registrado exitosamente' });
+
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: 'Error al registrar el usuario' });
+      console.error('Error en /register:', err);
+      res.status(500).json({ message: 'Error interno al registrar el usuario' });
     }
   });
 
