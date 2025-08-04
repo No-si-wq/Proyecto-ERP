@@ -7,7 +7,6 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from 'react-router-dom';
 import ProveedorForm from "../components/ProveedorForm";
-import RecibidoEfectivoCard from "../components/RecibidoEfectivoCard";
 import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 
@@ -174,6 +173,14 @@ const Compras = () => {
       fetchProductos();
     }
   }, [tiendaSeleccionada]);
+
+    const handleConfirmarPago = async () => {
+      // Sumar todos los importes recibidos
+      const totalRecibido = pagosRecibidos.reduce((acc, pago) => acc + pago.importe, 0);
+      const cambioCalculado = +(totalRecibido - totalCompra).toFixed(2);
+      setModalPanelConfirmar(false);
+      await registrarCompra({ importeRecibido: totalRecibido, cambio: cambioCalculado });
+    };
 
   // Agregar producto al carrito
   const agregarProducto = (id) => {
@@ -388,7 +395,12 @@ const Compras = () => {
         rowKey="key"
         onRow={record => ({
           onClick: () => {
-            setPagosRecibidos([{ metodo: record.descripcion, importe: totalCompra }]); // o mostrar modal para capturar importe
+            const totalRecibido = pagosRecibidos.reduce((acc, p) => acc + p.importe, 0);
+            if (totalRecibido >= totalCompra) {
+              message.warning("Ya se ha recibido el monto total de la venta");
+              return;
+            }
+            setMetodoSeleccionado([{ metodo: record.descripcion, importe: totalCompra }]); // o mostrar modal para capturar importe
             setModalPanelConfirmar(false);
             setTimeout(() => setModalRecibido(true), 250);
           }
@@ -445,8 +457,8 @@ const Compras = () => {
         <Button onClick={() => { setPagosRecibidos([]); setModalPanelConfirmar(false); }}>Cancelar</Button>
         <Button
           type="primary"
-          disabled={pagosRecibidos.length === 0 || loading}
-          onClick={registrarCompra}
+          disabled={pagosRecibidos.reduce((acc, p) => acc + p.importe, 0) < totalCompra}
+          onClick={handleConfirmarPago}
         >
           Confirmar
         </Button>
